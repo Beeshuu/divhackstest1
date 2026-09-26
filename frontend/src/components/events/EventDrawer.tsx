@@ -130,7 +130,11 @@ function DrawerCard({
               transition={{ duration: 0.2 }}
               className="absolute inset-0"
             >
-              {event.iconType === "pizza" ? <EventHeroArt /> : <CategoryHeroArt event={event} />}
+              {event.iconType === "pizza" && !event.isTemporary ? (
+                <EventHeroArt />
+              ) : (
+                <CategoryHeroArt event={event} />
+              )}
             </motion.div>
           </AnimatePresence>
           <div className="absolute right-[10px] top-[10px] flex gap-2">

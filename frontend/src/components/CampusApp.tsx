@@ -1,8 +1,9 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence } from "framer-motion";
 
+import { CreateEventModal } from "@/components/events/CreateEventModal";
 import { EventDrawer } from "@/components/events/EventDrawer";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopNavbar } from "@/components/layout/TopNavbar";
@@ -14,10 +15,31 @@ import { CampusStats } from "@/components/map/CampusStats";
 import { MapEmptyState } from "@/components/map/MapEmptyState";
 import { MapFilters } from "@/components/map/MapFilters";
 import { MapToast } from "@/components/map/MapToast";
+import { PickLocationBanner } from "@/components/map/PickLocationBanner";
+import { CATEGORY_STYLE } from "@/lib/constants";
 import { geoToMap, isOnMap } from "@/lib/geo";
 import { eventPath, useCampusState } from "@/lib/use-campus-state";
 import { useGeolocation, type GeoStatus } from "@/lib/use-geolocation";
-import type { CampusEvent, MapPill } from "@/types/event";
+import type { CampusEvent, EventDraft, MapPill } from "@/types/event";
+
+const pad = (n: number) => String(n).padStart(2, "0");
+
+/** Fresh form: starts at the next half hour, runs for an hour. */
+function emptyDraft(now = new Date()): EventDraft {
+  const start = new Date(now);
+  start.setMinutes(now.getMinutes() < 30 ? 30 : 60, 0, 0);
+  const end = new Date(start.getTime() + 60 * 60 * 1000);
+  const endTime = end.getDate() !== start.getDate() ? "23:59" : `${pad(end.getHours())}:${pad(end.getMinutes())}`;
+  return {
+    title: "",
+    description: "",
+    category: "Social",
+    locationName: "",
+    startTime: `${pad(start.getHours())}:${pad(start.getMinutes())}`,
+    endTime,
+    point: null,
+  };
+}
 
 const LOCATION_MESSAGES: Partial<Record<GeoStatus, string>> = {
   denied:
@@ -62,6 +84,30 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const mapRef = useRef<MapViewHandle>(null);
   const geo = useGeolocation();
+  const [composer, setComposer] = useState<"closed" | "form" | "picking">("closed");
+  const [draft, setDraft] = useState<EventDraft>(() => emptyDraft());
+
+  const openComposer = () => {
+    setSidebarOpen(false);
+    if (!draft.title && !draft.point) setDraft(emptyDraft());
+    setComposer("form");
+  };
+
+  const submitDraft = () => {
+    const created = state.createEvent(draft);
+    if (!created) return;
+    setComposer("closed");
+    setDraft(emptyDraft());
+    mapRef.current?.centerOn({ x: created.mapX, y: created.mapY });
+    state.showToast("Your event is on the map for this session. It will disappear when you refresh.");
+  };
+
+  useEffect(() => {
+    if (composer !== "picking") return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setComposer("form");
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [composer]);
 
   // Projected every render so the dot follows watchPosition updates.
   const userPoint = geo.position ? geoToMap(geo.position) : null;
@@ -120,7 +166,7 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
             setSidebarOpen(false);
           }}
           savedCount={state.saved.size}
-          onPostEvent={() => setSidebarOpen(false)}
+          onPostEvent={openComposer}
         />
 
         {sidebarOpen && (
@@ -142,7 +188,22 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
             onLocate={handleLocateButton}
             locating={geo.status === "requesting"}
             located={Boolean(userOnMap)}
+            onPickPoint={
+              composer === "picking"
+                ? (point) => {
+                    setDraft((d) => ({ ...d, point }));
+                    setComposer("form");
+                  }
+                : undefined
+            }
+            draftPin={
+              composer !== "closed" && draft.point
+                ? { ...draft.point, ...CATEGORY_STYLE[draft.category] }
+                : null
+            }
           />
+          <PickLocationBanner visible={composer === "picking"} onCancel={() => setComposer("form")} />
+          {composer !== "picking" && (
           <MapFilters
             activePill={state.mapPill}
             onPillClick={handlePill}
@@ -152,6 +213,7 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
             categoryFilter={state.categoryFilter}
             onCategoryChange={state.setCategoryFilter}
           />
+          )}
           <CampusStats />
           <MapEmptyState
             visible={state.visibleEvents.length === 0}
@@ -164,6 +226,15 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
           />
           <MapToast toast={state.toast} onDismiss={state.dismissToast} />
         </main>
+
+        <CreateEventModal
+          open={composer === "form"}
+          draft={draft}
+          onChange={setDraft}
+          onClose={() => setComposer("closed")}
+          onChooseOnMap={() => setComposer("picking")}
+          onSubmit={submitDraft}
+        />
 
         <AnimatePresence initial={false}>
           {state.drawerOpen && (
