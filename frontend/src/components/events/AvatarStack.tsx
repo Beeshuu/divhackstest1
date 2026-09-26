@@ -3,8 +3,8 @@ import { cn } from "@/lib/utils";
 interface AvatarStackProps {
   /** Initials for the locally generated placeholder chips. */
   people: string[];
-  /** Remaining-count chip, e.g. "+83". */
-  overflowLabel: string;
+  /** Total number of people; chips and the "+N" label derive from it. */
+  count: number;
   className?: string;
 }
 
@@ -15,21 +15,39 @@ const CHIP_STYLES = [
   "bg-[linear-gradient(150deg,#D7E8D4,#A7C8A3)] text-[#2F5230]",
 ];
 
+/** Matches the reference: three chips then "+(count − 4)", e.g. 87 → "+83". */
+function overflowFor(count: number): number {
+  return count > 4 ? count - 4 : 0;
+}
+
 /**
  * Overlapping attendee chips. Locally generated initials only — the prototype
  * never loads remote avatar images.
  */
-export function AvatarStack({ people, overflowLabel, className }: AvatarStackProps) {
+export function AvatarStack({ people, count, className }: AvatarStackProps) {
+  if (count === 0) {
+    return (
+      <p className={cn("text-[12.5px] font-medium leading-[22px] text-faint", className)}>
+        No one yet
+      </p>
+    );
+  }
+
+  const shown = people.slice(0, Math.min(3, count));
+  const overflow = overflowFor(count);
+
   return (
     <div className={cn("flex items-center", className)}>
       <div className="flex">
-        {people.map((initials, index) => (
+        {shown.map((initials, index) => (
           <span
             key={initials}
             aria-hidden
             className={cn(
               "grid h-[22px] w-[22px] place-items-center rounded-full text-[9px] font-bold ring-2 ring-panel",
-              CHIP_STYLES[index % CHIP_STYLES.length],
+              initials === "You"
+                ? "bg-brand text-[7.5px] text-white"
+                : CHIP_STYLES[index % CHIP_STYLES.length],
               index > 0 && "-ml-[7px]",
             )}
           >
@@ -37,9 +55,11 @@ export function AvatarStack({ people, overflowLabel, className }: AvatarStackPro
           </span>
         ))}
       </div>
-      <span className="ml-[7px] rounded-full bg-[#EFF2F7] px-[8px] py-[2px] text-[12px] font-semibold leading-[1.4] text-[#4C5C7B]">
-        {overflowLabel}
-      </span>
+      {overflow > 0 && (
+        <span className="ml-[7px] rounded-full bg-[#EFF2F7] px-[8px] py-[2px] text-[12px] font-semibold leading-[1.4] text-[#4C5C7B]">
+          +{overflow}
+        </span>
+      )}
     </div>
   );
 }

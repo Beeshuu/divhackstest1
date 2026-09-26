@@ -11,6 +11,11 @@
  * rendered glyph size — the reference icons measure ~25px in the sidebar.
  */
 
+import { Music } from "lucide-react";
+
+import { cn } from "@/lib/utils";
+import type { EventCategory } from "@/types/event";
+
 export interface GlyphProps {
   size?: number;
   className?: string;
@@ -161,4 +166,26 @@ export function RunnerIcon({ size = 18, className }: GlyphProps) {
       <path d="M6 9.7h3.3" />
     </svg>
   );
+}
+
+/** The illustrated glyph for a category, as used in the sidebar rail. */
+export function CategoryGlyph({
+  category,
+  size = 25,
+  className,
+}: GlyphProps & { category: EventCategory }) {
+  switch (category) {
+    case "Free Food":
+      return <PizzaSliceIcon size={size} className={className} />;
+    case "Social":
+      return <PeopleIcon size={size} className={cn("text-[#A24BEE]", className)} />;
+    case "Academic":
+      return <OpenBookIcon size={size} className={className} />;
+    case "Career":
+      return <BriefcaseIcon size={size} className={className} />;
+    case "Sports":
+      return <BasketballIcon size={size} className={className} />;
+    case "Entertainment":
+      return <Music size={size} strokeWidth={2.4} aria-hidden className={cn("text-[#9451EE]", className)} />;
+  }
 }
