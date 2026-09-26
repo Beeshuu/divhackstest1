@@ -16,7 +16,7 @@ export const MOCK_EVENTS: CampusEvent[] = [
     locationName: "Lerner Hall",
     address: "Lerner Hall, 2920 Broadway",
     description:
-      "Free pizza for Columbia students! Come grab a slice and meet other students. Hosted by the Columbia Undergraduate Council. First come, first served while supplies last!",
+      "Free pizza for Columbia students! Come grab a slice and meet other students. Hosted by the Columbia Undergraduate Council (CUC). First come, first served while supplies last!",
     mapX: 53.3,
     mapY: 19.4,
     distance: "4 min away",
@@ -29,6 +29,7 @@ export const MOCK_EVENTS: CampusEvent[] = [
     host: "Columbia Undergraduate Council",
     markerColor: "coral",
     iconType: "pizza",
+    emphasis: "Columbia students!",
   },
   {
     id: "live-music",

@@ -54,4 +54,31 @@ export interface CampusEvent {
   host: string;
   markerColor: MarkerColor;
   iconType: MarkerIcon;
+  /** Phrase in `description` rendered in bold, as in the reference drawer. */
+  emphasis?: string;
+  /**
+   * Created in this browser session only. Temporary events vanish on refresh and
+   * have no public URL until server persistence exists.
+   */
+  isTemporary?: boolean;
+}
+
+/** Sidebar selection: a category, every event, or the user's saved events. */
+export type SidebarFilter = "all" | "saved" | EventCategory;
+
+/** Single-select view pills floating over the map. */
+export type MapPill = "trending" | "nearMe" | "freeFood";
+
+export type DateFilter = "today" | "any";
+
+/** Form state for the Post Event modal. */
+export interface EventDraft {
+  title: string;
+  description: string;
+  category: EventCategory;
+  locationName: string;
+  startTime: string;
+  endTime: string;
+  /** Pin position on the campus map in %, set via "Choose on map". */
+  point: { x: number; y: number } | null;
 }

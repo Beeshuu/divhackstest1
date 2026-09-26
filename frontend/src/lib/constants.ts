@@ -1,4 +1,23 @@
-import type { MarkerColor } from "@/types/event";
+import type { EventCategory, MarkerColor, MarkerIcon } from "@/types/event";
+
+export const EVENT_CATEGORIES: EventCategory[] = [
+  "Free Food",
+  "Social",
+  "Academic",
+  "Career",
+  "Sports",
+  "Entertainment",
+];
+
+/** Marker colour and glyph a newly posted event gets for its category. */
+export const CATEGORY_STYLE: Record<EventCategory, { markerColor: MarkerColor; iconType: MarkerIcon }> = {
+  "Free Food": { markerColor: "coral", iconType: "pizza" },
+  Social: { markerColor: "pink", iconType: "users" },
+  Academic: { markerColor: "blue", iconType: "book" },
+  Career: { markerColor: "orange", iconType: "briefcase" },
+  Sports: { markerColor: "green", iconType: "run" },
+  Entertainment: { markerColor: "purple", iconType: "music" },
+};
 
 /**
  * Layout dimensions measured from the Campus Connect reference design
