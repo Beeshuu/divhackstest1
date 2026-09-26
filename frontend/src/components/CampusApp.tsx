@@ -13,8 +13,16 @@ import {
 import { CampusStats } from "@/components/map/CampusStats";
 import { MapFilters } from "@/components/map/MapFilters";
 import { MapToast } from "@/components/map/MapToast";
+import { geoToMap, isOnMap } from "@/lib/geo";
 import { eventPath, useCampusState } from "@/lib/use-campus-state";
-import type { CampusEvent } from "@/types/event";
+import { useGeolocation, type GeoStatus } from "@/lib/use-geolocation";
+import type { CampusEvent, MapPill } from "@/types/event";
+
+const LOCATION_MESSAGES: Partial<Record<GeoStatus, string>> = {
+  denied:
+    "Location access is required for location-based features like Near Me. You can allow it in your browser settings.",
+  unavailable: "Your location isn't available right now. Location-based features need it to work.",
+};
 
 /** Native share sheet when available, otherwise copy the event link. */
 async function shareEvent(event: CampusEvent, notify: (message: string) => void) {
@@ -52,6 +60,41 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
   const state = useCampusState(initialEventId);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const mapRef = useRef<MapViewHandle>(null);
+  const geo = useGeolocation();
+
+  // Projected every render so the dot follows watchPosition updates.
+  const userPoint = geo.position ? geoToMap(geo.position) : null;
+  const userOnMap = userPoint && isOnMap(userPoint) ? userPoint : null;
+
+  /** Centres on the user, asking for permission on first use. */
+  const locateUser = async (): Promise<boolean> => {
+    const result = await geo.request();
+    if (!result.position) {
+      const message = LOCATION_MESSAGES[result.status];
+      if (message) state.showToast(message);
+      return false;
+    }
+    const point = geoToMap(result.position);
+    if (!isOnMap(point)) {
+      state.showToast("You're outside the campus map area, so you can't be shown on it yet.");
+      return false;
+    }
+    mapRef.current?.centerOn(point, 1.8);
+    return true;
+  };
+
+  const handleLocateButton = async () => {
+    const located = await locateUser();
+    if (!located) mapRef.current?.reset();
+  };
+
+  const handlePill = async (pill: MapPill) => {
+    if (pill === "nearMe") {
+      if (await locateUser()) state.setMapPill("nearMe");
+      return;
+    }
+    state.setMapPill(pill === state.mapPill && pill !== "trending" ? "trending" : pill);
+  };
 
   return (
     <div className="flex h-screen min-h-screen flex-col overflow-hidden bg-canvas">
@@ -75,9 +118,20 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
             events={state.visibleEvents}
             selectedEventId={state.drawerOpen ? state.selectedEvent.id : null}
             onSelectEvent={state.selectEvent}
-            onLocate={() => mapRef.current?.reset()}
+            userPoint={userOnMap}
+            onLocate={handleLocateButton}
+            locating={geo.status === "requesting"}
+            located={Boolean(userOnMap)}
           />
-          <MapFilters />
+          <MapFilters
+            activePill={state.mapPill}
+            onPillClick={handlePill}
+            locating={geo.status === "requesting"}
+            dateFilter={state.dateFilter}
+            onDateChange={state.setDateFilter}
+            categoryFilter={state.categoryFilter}
+            onCategoryChange={state.setCategoryFilter}
+          />
           <CampusStats />
           <MapToast toast={state.toast} onDismiss={state.dismissToast} />
         </main>

@@ -6,15 +6,17 @@ import type { LatLng } from "./geo";
 
 export type GeoStatus = "idle" | "requesting" | "granted" | "denied" | "unavailable";
 
-export interface GeolocationState {
+export interface GeoResult {
   status: GeoStatus;
   position: LatLng | null;
+}
+
+export interface GeolocationState extends GeoResult {
   /**
    * Asks for location the first time it is called, then keeps watching.
-   * Resolves with the latest position, or null if location is not available.
-   * Never re-prompts after a denial.
+   * Resolves with the outcome; never re-prompts after a denial.
    */
-  request: () => Promise<LatLng | null>;
+  request: () => Promise<GeoResult>;
 }
 
 /**
@@ -40,16 +42,17 @@ export function useGeolocation(): GeolocationState {
     [],
   );
 
-  const request = useCallback((): Promise<LatLng | null> => {
+  const request = useCallback((): Promise<GeoResult> => {
     const current = statusRef.current;
+    const settled = (status: GeoStatus) => Promise.resolve({ status, position: positionRef.current });
     // A denial is final for the session; timeouts ("unavailable") may be retried
     // because retrying never shows another permission prompt.
-    if (current === "denied" || current === "requesting") return Promise.resolve(positionRef.current);
-    if (current === "granted" && positionRef.current) return Promise.resolve(positionRef.current);
+    if (current === "denied" || current === "requesting") return settled(current);
+    if (current === "granted" && positionRef.current) return settled("granted");
 
     if (typeof navigator === "undefined" || !("geolocation" in navigator)) {
       update("unavailable");
-      return Promise.resolve(null);
+      return settled("unavailable");
     }
 
     update("requesting");
@@ -60,7 +63,7 @@ export function useGeolocation(): GeolocationState {
           positionRef.current = next;
           setPosition(next);
           update("granted");
-          resolve(next);
+          resolve({ status: "granted", position: next });
 
           if (watchId.current === null) {
             watchId.current = navigator.geolocation.watchPosition(
@@ -75,8 +78,9 @@ export function useGeolocation(): GeolocationState {
           }
         },
         (error) => {
-          update(error.code === error.PERMISSION_DENIED ? "denied" : "unavailable");
-          resolve(null);
+          const next = error.code === error.PERMISSION_DENIED ? "denied" : "unavailable";
+          update(next);
+          resolve({ status: next, position: null });
         },
         { enableHighAccuracy: true, timeout: 12_000, maximumAge: 30_000 },
       );
