@@ -1,0 +1,90 @@
+"use client";
+
+import type { ComponentType } from "react";
+import { ChevronRight, Radio, Users } from "lucide-react";
+
+import { PizzaSliceIcon } from "@/components/icons/CategoryIcons";
+import { CAMPUS_STATS } from "@/data/mock-events";
+import { formatCount } from "@/lib/utils";
+
+type IconComponent = ComponentType<{
+  size?: number;
+  strokeWidth?: number;
+  className?: string;
+}>;
+
+interface Stat {
+  value: number;
+  label: string;
+  icon: IconComponent;
+  iconClass: string;
+}
+
+const STATS: Stat[] = [
+  {
+    value: CAMPUS_STATS.happeningNow,
+    label: "happening now",
+    icon: Radio,
+    iconClass: "text-[#F5453A]",
+  },
+  {
+    value: CAMPUS_STATS.activeOnCampus,
+    label: "active on campus",
+    icon: Users,
+    iconClass: "fill-brand text-brand",
+  },
+  {
+    value: CAMPUS_STATS.freeFoodEvents,
+    label: "free food events",
+    icon: PizzaSliceIcon,
+    iconClass: "",
+  },
+];
+
+/**
+ * Floating campus summary bar. Sits above the bottom edge of the map rather
+ * than in document flow, so it never pushes the map around.
+ */
+export function CampusStats() {
+  return (
+    <div className="pointer-events-none absolute bottom-5 left-1/2 z-10 w-[84%] max-w-[760px] -translate-x-1/2">
+      <dl className="pointer-events-auto flex h-[83px] items-stretch overflow-hidden rounded-[20px] bg-panel shadow-float">
+        {STATS.map((stat, index) => {
+          const Icon = stat.icon;
+          return (
+            <div
+              key={stat.label}
+              className="flex min-w-0 flex-1 items-center gap-3 px-3 tablet:gap-[15px] tablet:px-[18px]"
+              style={
+                index > 0
+                  ? { borderLeft: "1px solid var(--color-line)" }
+                  : undefined
+              }
+            >
+              <Icon
+                size={26}
+                strokeWidth={1.8}
+                aria-hidden
+                className={`shrink-0 ${stat.iconClass}`}
+              />
+              <div className="min-w-0">
+                <dd className="text-[24px] font-extrabold leading-none tracking-[-0.02em] text-ink">
+                  {formatCount(stat.value)}
+                </dd>
+                <dt className="mt-[5px] truncate text-[13.5px] font-medium leading-tight text-muted">
+                  {stat.label}
+                </dt>
+              </div>
+              <ChevronRight
+                size={18}
+                strokeWidth={2.2}
+                aria-hidden
+                className="ml-auto hidden shrink-0 text-faint tablet:block"
+              />
+            </div>
+          );
+        })}
+      </dl>
+    </div>
+  );
+}
