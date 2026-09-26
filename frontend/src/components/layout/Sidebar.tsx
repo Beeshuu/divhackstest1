@@ -2,10 +2,11 @@
 
 import type { ComponentType } from "react";
 import { motion } from "framer-motion";
-import { Bookmark, Plus, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 
 import {
   BasketballIcon,
+  BookmarkIcon,
   BriefcaseIcon,
   HouseIcon,
   OpenBookIcon,
@@ -34,7 +35,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Academic", icon: OpenBookIcon, iconClass: "" },
   { label: "Career", icon: BriefcaseIcon, iconClass: "" },
   { label: "Sports", icon: BasketballIcon, iconClass: "" },
-  { label: "Saved", icon: Bookmark, iconClass: "text-[#3B4A66]" },
+  { label: "Saved", icon: BookmarkIcon, iconClass: "text-[#3B4A66]" },
 ];
 
 const SELECTED = "Happening Now";
@@ -77,18 +78,13 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               type="button"
               aria-current={selected ? "page" : undefined}
               className={cn(
-                "flex h-[49px] items-center gap-5 rounded-[13px] px-[22px] text-left text-[15.5px] transition-colors duration-150 ease-out desktop:gap-5",
+                "flex h-[49px] items-center gap-[18px] rounded-[13px] px-[18px] text-left text-[15.5px] transition-colors duration-150 ease-out",
                 selected
                   ? "bg-brand-tint font-bold text-brand"
                   : "font-semibold text-ink hover:bg-[#f0f3f9]",
               )}
             >
-              <Icon
-                size={20}
-                strokeWidth={2}
-                aria-hidden
-                className={cn("shrink-0", item.iconClass)}
-              />
+              <Icon size={25} aria-hidden className={cn("shrink-0", item.iconClass)} />
               <span className="truncate">{item.label}</span>
             </button>
           );

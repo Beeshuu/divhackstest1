@@ -1,9 +1,9 @@
 "use client";
 
 import type { ComponentType } from "react";
-import { ChevronRight, Radio, Users } from "lucide-react";
+import { ChevronRight, Radio } from "lucide-react";
 
-import { PizzaSliceIcon } from "@/components/icons/CategoryIcons";
+import { PeopleIcon, PizzaSliceIcon } from "@/components/icons/CategoryIcons";
 import { CAMPUS_STATS } from "@/data/mock-events";
 import { formatCount } from "@/lib/utils";
 
@@ -30,8 +30,8 @@ const STATS: Stat[] = [
   {
     value: CAMPUS_STATS.activeOnCampus,
     label: "active on campus",
-    icon: Users,
-    iconClass: "fill-brand text-brand",
+    icon: PeopleIcon,
+    iconClass: "text-brand",
   },
   {
     value: CAMPUS_STATS.freeFoodEvents,
@@ -62,8 +62,8 @@ export function CampusStats() {
               }
             >
               <Icon
-                size={26}
-                strokeWidth={1.8}
+                size={28}
+                strokeWidth={2}
                 aria-hidden
                 className={`shrink-0 ${stat.iconClass}`}
               />

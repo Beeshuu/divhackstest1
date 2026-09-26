@@ -2,15 +2,9 @@
 
 import type { ComponentType } from "react";
 import { motion } from "framer-motion";
-import {
-  BookOpen,
-  BriefcaseBusiness,
-  GraduationCap,
-  Music,
-  Pizza,
-  Users,
-} from "lucide-react";
+import { BookOpen, BriefcaseBusiness, GraduationCap, Music, Users } from "lucide-react";
 
+import { PizzaSliceIcon, RunnerIcon } from "@/components/icons/CategoryIcons";
 import { MARKER_PALETTE } from "@/lib/constants";
 import type { CampusEvent, MarkerIcon } from "@/types/event";
 
@@ -20,8 +14,13 @@ type IconComponent = ComponentType<{
   className?: string;
 }>;
 
+/** The pizza pin uses the illustrated cream-on-red slice, not a stroke glyph. */
+function PizzaPinIcon({ size }: { size?: number }) {
+  return <PizzaSliceIcon size={size} variant="onColor" />;
+}
+
 const MARKER_ICONS: Record<MarkerIcon, IconComponent> = {
-  pizza: Pizza,
+  pizza: PizzaPinIcon,
   music: Music,
   book: BookOpen,
   briefcase: BriefcaseBusiness,
@@ -106,34 +105,3 @@ export function EventMarker({ event, selected, onSelect }: EventMarkerProps) {
   );
 }
 
-/** Lucide has no running figure, so this matches the reference sports pin. */
-function RunnerIcon({
-  size = 17,
-  strokeWidth = 2.3,
-  className,
-}: {
-  size?: number;
-  strokeWidth?: number;
-  className?: string;
-}) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={strokeWidth}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-      className={className}
-    >
-      <circle cx="14.5" cy="4.5" r="2.2" fill="currentColor" stroke="none" />
-      <path d="M13 8.4 9.6 11l1.8 3.4-2.6 5.4" />
-      <path d="m13 8.4 3.6 1.8 1.1 3.6" />
-      <path d="m11.4 14.4 4.4 1.2 1.5 4" />
-      <path d="M6.2 9.6h3.2" />
-    </svg>
-  );
-}

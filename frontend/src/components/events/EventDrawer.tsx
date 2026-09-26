@@ -10,13 +10,12 @@ import {
   Navigation,
   PersonStanding,
   Star,
-  Users,
   X,
 } from "lucide-react";
 
 import { AvatarStack } from "./AvatarStack";
 import { EventHeroArt } from "./EventHeroArt";
-import { PizzaSliceIcon } from "@/components/icons/CategoryIcons";
+import { PeopleIcon, PizzaSliceIcon } from "@/components/icons/CategoryIcons";
 import { MARKER_PALETTE } from "@/lib/constants";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { formatCount } from "@/lib/utils";
@@ -103,7 +102,7 @@ function DrawerCard({ event, onClose }: EventDrawerProps) {
           className="inline-flex h-[26px] items-center gap-[5px] rounded-full px-[10px] text-[13px] font-semibold"
           style={{ backgroundColor: palette.soft, color: palette.text }}
         >
-          <PizzaSliceIcon size={14} />
+          <PizzaSliceIcon size={15} />
           {event.category}
         </span>
 
@@ -136,21 +135,16 @@ function DrawerCard({ event, onClose }: EventDrawerProps) {
           </span>
         </div>
 
-        <p className="mt-[18px] text-[15px] leading-[1.35] text-ink-soft">
+        <p className="mt-[18px] text-[15px] leading-[21px] text-ink-soft">
           Free pizza for <strong className="font-bold text-ink">Columbia students!</strong> Come
-          grab a slice and meet other students. Hosted by the Columbia Undergraduate Council. First
-          come, first served while supplies last!
+          grab a slice and meet other students. Hosted by the Columbia Undergraduate Council (CUC).
+          First come, first served while supplies last!
         </p>
 
-        <div className="mt-[15px] flex items-start">
+        <div className="mt-[16px] flex items-start">
           <div className="min-w-0 flex-1 pr-3">
             <div className="flex items-center gap-[9px]">
-              <Users
-                size={19}
-                strokeWidth={1.8}
-                aria-hidden
-                className="shrink-0 fill-brand text-brand"
-              />
+              <PeopleIcon size={20} aria-hidden className="shrink-0 text-brand" />
               <span className="truncate text-[15px] font-bold leading-[1.15] text-ink">
                 {formatCount(event.goingCount)} going
               </span>
@@ -207,7 +201,7 @@ function DrawerCard({ event, onClose }: EventDrawerProps) {
           Directions
         </motion.button>
 
-        <div className="mt-[8px] flex items-start gap-[11px] border-t border-line pt-[9px]">
+        <div className="mt-[18px] flex items-start gap-[11px]">
           <CalendarDays
             size={19}
             strokeWidth={2.1}
@@ -225,14 +219,9 @@ function DrawerCard({ event, onClose }: EventDrawerProps) {
 
         <button
           type="button"
-          className="mt-[12px] flex w-full items-center gap-[11px] border-t border-line pt-[9px] text-left transition-colors duration-150 hover:text-brand"
+          className="mt-[20px] flex w-full items-center gap-[11px] text-left transition-colors duration-150 hover:text-brand"
         >
-          <Users
-            size={19}
-            strokeWidth={1.8}
-            aria-hidden
-            className="shrink-0 fill-[#48587A] text-[#48587A]"
-          />
+          <PeopleIcon size={20} aria-hidden className="shrink-0 text-[#48587A]" />
           <span className="min-w-0 flex-1 truncate text-[14px] font-medium leading-[1.2] text-ink-soft">
             Hosted by {event.host}
           </span>
