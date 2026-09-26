@@ -32,9 +32,13 @@ export function eventPath(event: CampusEvent): string | null {
   return event.isTemporary ? null : `/events/${event.id}`;
 }
 
+const APP_TITLE = "Campus Connect — Columbia University";
+
+/** Keeps the address bar and tab title in step with the open event. */
 function syncUrl(event: CampusEvent | null) {
   const path = event ? eventPath(event) ?? "/" : "/";
   if (window.location.pathname !== path) window.history.replaceState(null, "", path);
+  document.title = event ? `${event.title} at ${event.locationName} — Campus Connect` : APP_TITLE;
 }
 
 /**
