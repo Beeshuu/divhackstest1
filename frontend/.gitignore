@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# The repo-root .gitignore ignores every `data/` dir (legacy SQLite store);
+# the frontend mock data must still be tracked.
+!src/data/
