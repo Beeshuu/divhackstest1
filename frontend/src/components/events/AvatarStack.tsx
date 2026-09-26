@@ -1,3 +1,5 @@
+import { Check } from "lucide-react";
+
 import { cn } from "@/lib/utils";
 
 interface AvatarStackProps {
@@ -21,7 +23,7 @@ function overflowFor(count: number): number {
 }
 
 /**
- * Overlapping attendee chips. Locally generated initials only — the prototype
+ * Overlapping attendee chips; the entry "You" renders as a check mark. Locally generated initials only — the prototype
  * never loads remote avatar images.
  */
 export function AvatarStack({ people, count, className }: AvatarStackProps) {
@@ -45,13 +47,11 @@ export function AvatarStack({ people, count, className }: AvatarStackProps) {
             aria-hidden
             className={cn(
               "grid h-[22px] w-[22px] place-items-center rounded-full text-[9px] font-bold ring-2 ring-panel",
-              initials === "You"
-                ? "bg-brand text-[7.5px] text-white"
-                : CHIP_STYLES[index % CHIP_STYLES.length],
+              initials === "You" ? "bg-brand text-white" : CHIP_STYLES[index % CHIP_STYLES.length],
               index > 0 && "-ml-[7px]",
             )}
           >
-            {initials}
+            {initials === "You" ? <Check size={12} strokeWidth={3.2} /> : initials}
           </span>
         ))}
       </div>
