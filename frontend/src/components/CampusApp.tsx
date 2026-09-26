@@ -1,12 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { AnimatePresence } from "framer-motion";
 
 import { EventDrawer } from "@/components/events/EventDrawer";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopNavbar } from "@/components/layout/TopNavbar";
-import { CampusMapPlaceholder } from "@/components/map/CampusMapPlaceholder";
+import {
+  CampusMapPlaceholder,
+  type MapViewHandle,
+} from "@/components/map/CampusMapPlaceholder";
 import { CampusStats } from "@/components/map/CampusStats";
 import { MapFilters } from "@/components/map/MapFilters";
 import { useCampusState } from "@/lib/use-campus-state";
@@ -20,6 +23,7 @@ interface CampusAppProps {
 export function CampusApp({ initialEventId }: CampusAppProps) {
   const state = useCampusState(initialEventId);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const mapRef = useRef<MapViewHandle>(null);
 
   return (
     <div className="flex h-screen min-h-screen flex-col overflow-hidden bg-canvas">
@@ -39,9 +43,11 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
 
         <main className="relative min-w-0 flex-1" aria-label="Campus map">
           <CampusMapPlaceholder
+            viewRef={mapRef}
             events={state.visibleEvents}
             selectedEventId={state.drawerOpen ? state.selectedEvent.id : null}
             onSelectEvent={state.selectEvent}
+            onLocate={() => mapRef.current?.reset()}
           />
           <MapFilters />
           <CampusStats />

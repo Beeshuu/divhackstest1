@@ -125,6 +125,7 @@ export function CampusMapArt() {
     <svg
       viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
       preserveAspectRatio="xMidYMid slice"
+      overflow="visible"
       className="absolute inset-0 h-full w-full"
       role="img"
       aria-label="Stylised map of the Columbia University Morningside campus"

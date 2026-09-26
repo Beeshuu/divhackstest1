@@ -1,11 +1,12 @@
 "use client";
 
 import type { ComponentType } from "react";
-import { motion } from "framer-motion";
+import { motion, type MotionValue } from "framer-motion";
 import { BookOpen, BriefcaseBusiness, GraduationCap, Music, Users } from "lucide-react";
 
 import { PizzaSliceIcon, RunnerIcon } from "@/components/icons/CategoryIcons";
 import { MARKER_PALETTE } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 import type { CampusEvent, MarkerIcon } from "@/types/event";
 
 type IconComponent = ComponentType<{
@@ -33,26 +34,90 @@ interface EventMarkerProps {
   event: CampusEvent;
   selected: boolean;
   onSelect: (eventId: string) => void;
+  /** 1 / map zoom, so the pin keeps its size while the map scales under it. */
+  inverseScale: MotionValue<number>;
+  /** False while the map is in "choose a location" mode. */
+  interactive?: boolean;
+}
+
+/**
+ * Zero-size anchor at a map position. Children are drawn relative to the
+ * anchor point and counter-scaled against the map zoom.
+ */
+export function MapAnchor({
+  x,
+  y,
+  inverseScale,
+  children,
+  className,
+}: {
+  x: number;
+  y: number;
+  inverseScale: MotionValue<number>;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <motion.div
+      className={cn("pointer-events-none absolute h-0 w-0", className)}
+      style={{ left: `${x}%`, top: `${y}%`, scale: inverseScale, transformOrigin: "0 0" }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+/** The teardrop pin shape with its category glyph. */
+export function MarkerPin({
+  markerColor,
+  iconType,
+  selected = false,
+}: Pick<CampusEvent, "markerColor" | "iconType"> & { selected?: boolean }) {
+  const palette = MARKER_PALETTE[markerColor];
+  const Icon = MARKER_ICONS[iconType];
+  const width = selected ? 39 : 34;
+  const height = selected ? 50 : 44;
+  return (
+    <>
+      <svg viewBox="0 0 34 44" width={width} height={height} aria-hidden className="block">
+        <path
+          d="M17 43.2c0 0 15.6-17.4 15.6-26.2a15.6 15.6 0 1 0-31.2 0C1.4 25.8 17 43.2 17 43.2Z"
+          fill={palette.solid}
+          stroke="#FFFFFF"
+          strokeWidth={2.2}
+        />
+      </svg>
+      <span
+        aria-hidden
+        className="absolute left-0 right-0 top-0 grid place-items-center text-white"
+        style={{ height: width }}
+      >
+        <Icon size={selected ? 19 : 17} strokeWidth={2.3} />
+      </span>
+    </>
+  );
 }
 
 /**
  * A single teardrop pin anchored by its tip to `event.mapX` / `event.mapY`.
  * Only the selected marker carries the soft outer glow.
  */
-export function EventMarker({ event, selected, onSelect }: EventMarkerProps) {
+export function EventMarker({
+  event,
+  selected,
+  onSelect,
+  inverseScale,
+  interactive = true,
+}: EventMarkerProps) {
   const palette = MARKER_PALETTE[event.markerColor];
-  const Icon = MARKER_ICONS[event.iconType];
   const width = selected ? 39 : 34;
   const height = selected ? 50 : 44;
 
   return (
+    <MapAnchor x={event.mapX} y={event.mapY} inverseScale={inverseScale} className={selected ? "z-[2]" : "z-[1]"}>
     <div
       className="absolute"
-      style={{
-        left: `${event.mapX}%`,
-        top: `${event.mapY}%`,
-        transform: "translate(-50%, -100%)",
-      }}
+      style={{ transform: "translate(-50%, -100%)" }}
     >
       {selected && (
         <span aria-hidden className="pointer-events-none absolute left-1/2 top-[38%] -translate-x-1/2 -translate-y-1/2">
@@ -72,36 +137,21 @@ export function EventMarker({ event, selected, onSelect }: EventMarkerProps) {
         onClick={() => onSelect(event.id)}
         aria-label={`${event.title} at ${event.locationName}`}
         aria-pressed={selected}
+        tabIndex={interactive ? 0 : -1}
         initial={false}
-        whileHover={{ scale: 1.08, y: -3 }}
-        whileTap={{ scale: 0.97 }}
+        whileHover={interactive ? { scale: 1.08, y: -3 } : undefined}
+        whileTap={interactive ? { scale: 0.97 } : undefined}
         transition={{ duration: 0.16, ease: "easeOut" }}
-        className="relative block origin-bottom drop-shadow-[0_3px_5px_rgba(15,37,71,0.22)]"
+        className={cn(
+          "relative block origin-bottom drop-shadow-[0_3px_5px_rgba(15,37,71,0.22)]",
+          interactive ? "pointer-events-auto" : "pointer-events-none",
+        )}
         style={{ width, height }}
       >
-        <svg
-          viewBox="0 0 34 44"
-          width={width}
-          height={height}
-          aria-hidden
-          className="block"
-        >
-          <path
-            d="M17 43.2c0 0 15.6-17.4 15.6-26.2a15.6 15.6 0 1 0-31.2 0C1.4 25.8 17 43.2 17 43.2Z"
-            fill={palette.solid}
-            stroke="#FFFFFF"
-            strokeWidth={2.2}
-          />
-        </svg>
-        <span
-          aria-hidden
-          className="absolute left-0 right-0 top-0 grid place-items-center text-white"
-          style={{ height: width }}
-        >
-          <Icon size={selected ? 19 : 17} strokeWidth={2.3} />
-        </span>
+        <MarkerPin markerColor={event.markerColor} iconType={event.iconType} selected={selected} />
       </motion.button>
     </div>
+    </MapAnchor>
   );
 }
 

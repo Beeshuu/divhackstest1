@@ -159,11 +159,8 @@ export const MOCK_EVENTS: CampusEvent[] = [
   },
 ];
 
-/** The event the drawer shows in Phase 1. */
+/** The event selected when the app first opens. */
 export const FEATURED_EVENT_ID = "free-pizza";
-
-/** Purely decorative "you are here" marker position (no geolocation). */
-export const USER_LOCATION = { x: 38.7, y: 52.4 } as const;
 
 /** Bottom status bar figures shown over the map. */
 export const CAMPUS_STATS = {
