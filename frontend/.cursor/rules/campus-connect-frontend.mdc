@@ -1,0 +1,73 @@
+---
+description: Conventions for the Campus Connect frontend (Next.js visual prototype)
+globs: frontend/**
+alwaysApply: false
+---
+
+# Campus Connect frontend
+
+Read `frontend/FRONTEND_SPEC.md` before making visual changes — it records the measured
+dimensions, colour tokens and typography scale this UI is built from.
+
+## The reference design is authoritative
+
+The UI reproduces a reference design screenshot. For anything visual, match the
+reference rather than personal taste, and measure instead of guessing. Do not redesign,
+simplify, or introduce a competing visual system.
+
+## Stack
+
+Next.js (App Router) + TypeScript + Tailwind CSS v4 + `lucide-react` + `framer-motion`.
+
+- Prefer custom Tailwind components. Do not add a component library, state manager,
+  data layer, or second icon set.
+- Avoid new dependencies generally — a small local SVG beats a package.
+- Use the `@theme` tokens in `src/app/globals.css`. Add a token rather than hard-coding
+  the same new colour twice.
+- `globals.css` is for body defaults, font smoothing, the global background, box-sizing
+  and shared tokens only. Component styling belongs in Tailwind utilities.
+
+## Structure
+
+- `app/page.tsx` composes the shell and holds only panel-visibility state. Keep event
+  data, map markup and component-specific styling out of it.
+- Keep components small and focused. No giant files, no duplicate components, no
+  speculative abstraction.
+- Strict TypeScript; avoid `any`.
+
+## No backend code in visual components
+
+Visual components take plain props. Keep data fetching, side effects and persistence out
+of them — in server components or dedicated hooks when they arrive.
+
+The current phase is presentation-only: no API calls, database access, auth,
+geolocation, notifications, persistence, real search or real filtering. Buttons may have
+hover and press states without production behaviour. Do not implement these early.
+
+## The map will be replaced by Mapbox
+
+`components/map/CampusMapPlaceholder.tsx` is the seam. It accepts
+`{ events, selectedEventId, onSelectEvent }` — the props a real map needs — so Mapbox can
+drop in behind the same interface.
+
+`CampusMapArt.tsx` is the throwaway static illustration. It must be imported only by the
+placeholder and must never leak into unrelated components.
+
+Keep the map desaturated so event markers stay the most saturated thing on screen.
+
+## Assets are local only
+
+No remote images: no Unsplash, Pexels, randomuser.me, or CDN avatars. Use local SVG, CSS
+compositions, or files under `public/assets/`. The app must render with zero network
+image requests.
+
+## Motion
+
+Subtle and premium: short hover transitions, a 1px lift on pills, a small scale-down on
+press, a marker hover scale around 1.08, and the drawer slide. No constant bouncing or
+pulsing, no large scaling, rotations, or dramatic transitions.
+
+## Definition of done
+
+`npm run build` passes from `frontend/`, with no TypeScript errors, no lint-related build
+blockers, and no browser console errors.
