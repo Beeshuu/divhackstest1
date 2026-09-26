@@ -14,6 +14,7 @@ import {
   PizzaSliceIcon,
 } from "@/components/icons/CategoryIcons";
 import { cn } from "@/lib/utils";
+import type { SidebarFilter } from "@/types/event";
 
 type IconComponent = ComponentType<{
   size?: number;
@@ -23,33 +24,33 @@ type IconComponent = ComponentType<{
 
 interface NavItem {
   label: string;
+  filter: SidebarFilter;
   icon: IconComponent;
   /** Tint for the single-colour glyphs; the illustrated ones carry their own. */
   iconClass: string;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: "Happening Now", icon: HouseIcon, iconClass: "text-brand" },
-  { label: "Free Food", icon: PizzaSliceIcon, iconClass: "" },
-  { label: "Social", icon: PeopleIcon, iconClass: "text-[#A24BEE]" },
-  { label: "Academic", icon: OpenBookIcon, iconClass: "" },
-  { label: "Career", icon: BriefcaseIcon, iconClass: "" },
-  { label: "Sports", icon: BasketballIcon, iconClass: "" },
-  { label: "Saved", icon: BookmarkIcon, iconClass: "text-[#3B4A66]" },
+  { label: "Happening Now", filter: "all", icon: HouseIcon, iconClass: "text-brand" },
+  { label: "Free Food", filter: "Free Food", icon: PizzaSliceIcon, iconClass: "" },
+  { label: "Social", filter: "Social", icon: PeopleIcon, iconClass: "text-[#A24BEE]" },
+  { label: "Academic", filter: "Academic", icon: OpenBookIcon, iconClass: "" },
+  { label: "Career", filter: "Career", icon: BriefcaseIcon, iconClass: "" },
+  { label: "Sports", filter: "Sports", icon: BasketballIcon, iconClass: "" },
+  { label: "Saved", filter: "saved", icon: BookmarkIcon, iconClass: "text-[#3B4A66]" },
 ];
-
-const SELECTED = "Happening Now";
 
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
+  selected: SidebarFilter;
+  onSelect: (filter: SidebarFilter) => void;
+  savedCount: number;
+  onPostEvent: () => void;
 }
 
-/**
- * Category rail. Selection is fixed to "Happening Now" in Phase 1 — the items
- * are presentation-only and do not filter anything yet.
- */
-export function Sidebar({ isOpen, onClose }: SidebarProps) {
+/** Category rail: filters the events shown on the map. */
+export function Sidebar({ isOpen, onClose, selected: selectedFilter, onSelect, savedCount, onPostEvent }: SidebarProps) {
   return (
     <aside
       aria-label="Event categories"
@@ -70,13 +71,14 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
       <nav className="flex flex-col gap-[5px]">
         {NAV_ITEMS.map((item) => {
-          const selected = item.label === SELECTED;
+          const selected = item.filter === selectedFilter;
           const Icon = item.icon;
           return (
             <button
               key={item.label}
               type="button"
               aria-current={selected ? "page" : undefined}
+              onClick={() => onSelect(item.filter)}
               className={cn(
                 "flex h-[49px] items-center gap-[18px] rounded-[13px] px-[18px] text-left text-[15.5px] transition-colors duration-150 ease-out",
                 selected
@@ -86,6 +88,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             >
               <Icon size={25} aria-hidden className={cn("shrink-0", item.iconClass)} />
               <span className="truncate">{item.label}</span>
+              {item.filter === "saved" && savedCount > 0 && (
+                <span className="ml-auto rounded-full bg-brand-tint px-2 py-[1px] text-[12px] font-bold text-brand">
+                  {savedCount}
+                </span>
+              )}
             </button>
           );
         })}
@@ -93,6 +100,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
       <motion.button
         type="button"
+        onClick={onPostEvent}
         whileHover={{ y: -1 }}
         whileTap={{ scale: 0.98, y: 0 }}
         transition={{ duration: 0.15, ease: "easeOut" }}

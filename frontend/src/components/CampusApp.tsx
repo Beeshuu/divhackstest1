@@ -11,6 +11,7 @@ import {
   type MapViewHandle,
 } from "@/components/map/CampusMapPlaceholder";
 import { CampusStats } from "@/components/map/CampusStats";
+import { MapEmptyState } from "@/components/map/MapEmptyState";
 import { MapFilters } from "@/components/map/MapFilters";
 import { MapToast } from "@/components/map/MapToast";
 import { geoToMap, isOnMap } from "@/lib/geo";
@@ -98,10 +99,29 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
 
   return (
     <div className="flex h-screen min-h-screen flex-col overflow-hidden bg-canvas">
-      <TopNavbar onOpenSidebar={() => setSidebarOpen(true)} />
+      <TopNavbar
+        onOpenSidebar={() => setSidebarOpen(true)}
+        query={state.query}
+        onQueryChange={state.setQuery}
+        results={state.visibleEvents}
+        onSelectResult={(event) => {
+          state.selectEvent(event.id);
+          mapRef.current?.centerOn({ x: event.mapX, y: event.mapY });
+        }}
+      />
 
       <div className="relative flex min-h-0 flex-1">
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <Sidebar
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          selected={state.sidebarFilter}
+          onSelect={(filter) => {
+            state.setSidebarFilter(filter);
+            setSidebarOpen(false);
+          }}
+          savedCount={state.saved.size}
+          onPostEvent={() => setSidebarOpen(false)}
+        />
 
         {sidebarOpen && (
           <button
@@ -133,6 +153,15 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
             onCategoryChange={state.setCategoryFilter}
           />
           <CampusStats />
+          <MapEmptyState
+            visible={state.visibleEvents.length === 0}
+            message={
+              state.sidebarFilter === "saved" && !state.query
+                ? "You haven't saved any events yet — use the bookmark on an event."
+                : "No events match your search and filters."
+            }
+            onReset={state.clearFilters}
+          />
           <MapToast toast={state.toast} onDismiss={state.dismissToast} />
         </main>
 

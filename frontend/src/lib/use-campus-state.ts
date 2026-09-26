@@ -144,8 +144,17 @@ export function useCampusState(initialEventId?: string) {
     [],
   );
 
+  const clearFilters = useCallback(() => {
+    setQuery("");
+    setSidebarFilter("all");
+    setMapPill("trending");
+    setCategoryFilter("all");
+    setDateFilter("today");
+  }, []);
+
   return {
     events,
+    clearFilters,
     visibleEvents,
     selectedEvent,
     drawerOpen,
