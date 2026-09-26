@@ -1,0 +1,92 @@
+@import "tailwindcss";
+
+@theme {
+  /* Breakpoints tuned to the layout tiers in FRONTEND_SPEC.md */
+  --breakpoint-tablet: 900px;
+  --breakpoint-desktop: 1200px;
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+
+  /* Brand blues, sampled from the reference screenshot */
+  --color-brand: #1766e8;
+  --color-brand-dark: #1159ce;
+  --color-brand-press: #0f4fb8;
+  --color-brand-tint: #eaf1fd;
+  --color-brand-soft: #e6eefb;
+
+  /* Text */
+  --color-ink: #0f2547;
+  --color-ink-soft: #33456a;
+  --color-muted: #67758f;
+  --color-faint: #8e9bb2;
+
+  /* Surfaces */
+  --color-canvas: #f1f4fa;
+  --color-panel: #ffffff;
+  --color-rail: #fbfcfe;
+  --color-line: #e7ecf4;
+  --color-line-strong: #dde3ec;
+  --color-field: #f2f4f8;
+
+  /* Category accents */
+  --color-coral: #f13f2d;
+  --color-coral-soft: #fce2e3;
+  --color-coral-text: #e23522;
+
+  /* Placeholder campus map palette */
+  --color-map-ground: #e6e1d9;
+  --color-map-walk: #eeebe4;
+  --color-map-street: #f1f3f6;
+  --color-map-street-line: #dcdfe6;
+  --color-map-building: #dbe2ec;
+  --color-map-building-alt: #d2dae6;
+  --color-map-building-edge: #b7c4d6;
+  --color-map-lawn: #c2d4a4;
+  --color-map-tree: #8fbe79;
+  --color-map-tree-dark: #74a862;
+  --color-map-label: #47536b;
+  --color-map-street-label: #7e8a9d;
+
+  /* Restrained, cool-tinted elevation */
+  --shadow-pill: 0 1px 2px rgb(16 37 71 / 0.06), 0 4px 10px rgb(16 37 71 / 0.07);
+  --shadow-pill-hover: 0 2px 4px rgb(16 37 71 / 0.08), 0 8px 18px rgb(16 37 71 / 0.1);
+  --shadow-float: 0 2px 6px rgb(16 37 71 / 0.06), 0 12px 28px rgb(16 37 71 / 0.1);
+  --shadow-panel: -6px 0 24px rgb(16 37 71 / 0.07), 0 2px 8px rgb(16 37 71 / 0.05);
+  --shadow-marker: 0 2px 4px rgb(16 37 71 / 0.18), 0 6px 12px rgb(16 37 71 / 0.16);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Icon-only controls still need a clearly visible keyboard focus ring. */
+:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+/* Panels scroll on short viewports without showing a scrollbar over the design. */
+.scrollbar-none {
+  scrollbar-width: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}

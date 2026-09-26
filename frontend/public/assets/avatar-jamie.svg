@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="80" height="80" role="img" aria-label="Placeholder portrait">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#E3ECFA" />
+      <stop offset="1" stop-color="#C7D8F1" />
+    </linearGradient>
+    <linearGradient id="fg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8FA8CD" />
+      <stop offset="1" stop-color="#6F8BB6" />
+    </linearGradient>
+    <clipPath id="round"><circle cx="40" cy="40" r="40" /></clipPath>
+  </defs>
+  <g clip-path="url(#round)">
+    <rect width="80" height="80" fill="url(#bg)" />
+    <circle cx="40" cy="32" r="14" fill="url(#fg)" />
+    <path d="M8 80c0-17.7 14.3-28 32-28s32 10.3 32 28z" fill="url(#fg)" />
+  </g>
+</svg>
