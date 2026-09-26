@@ -115,7 +115,7 @@ function SearchField({ query, onQueryChange, results, onSelectResult }: SearchPr
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         onKeyDown={onKeyDown}
-        className="h-11 w-full cursor-text rounded-full border border-transparent bg-field pl-[46px] pr-10 text-[15px] font-medium text-ink placeholder:font-normal placeholder:text-faint transition-colors duration-150 hover:bg-[#edf0f6] focus:border-brand/30 focus:bg-white focus:outline-none [&::-webkit-search-cancel-button]:hidden"
+        className={`h-11 w-full cursor-text rounded-full border border-transparent bg-field pl-[46px] ${query ? "pr-10" : "pr-4"} text-[15px] font-medium text-ink placeholder:font-normal placeholder:text-faint transition-colors duration-150 hover:bg-[#edf0f6] focus:border-brand/30 focus:bg-white focus:outline-none [&::-webkit-search-cancel-button]:hidden`}
       />
       {query && (
         <button

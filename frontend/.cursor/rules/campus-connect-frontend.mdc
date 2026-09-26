@@ -40,9 +40,11 @@ Next.js (App Router) + TypeScript + Tailwind CSS v4 + `lucide-react` + `framer-m
 Visual components take plain props. Keep data fetching, side effects and persistence out
 of them — in server components or dedicated hooks when they arrive.
 
-The current phase is presentation-only: no API calls, database access, auth,
-geolocation, notifications, persistence, real search or real filtering. Buttons may have
-hover and press states without production behaviour. Do not implement these early.
+Interactivity is browser-only: React state and browser APIs, with no API routes,
+database, auth or server persistence. Geolocation is requested only from a location
+control, kept in memory, and never sent or stored. Session-created events are
+temporary and must never be presented as permanently stored or given a URL. See
+"Frontend interactivity" in FRONTEND_SPEC.md.
 
 ## The map will be replaced by Mapbox
 

@@ -188,7 +188,7 @@ export function CreateEventModal({
                     onChange={(e) => set("locationName", e.target.value)}
                     placeholder="Building or spot, e.g. Low Steps"
                     maxLength={60}
-                    className={cn(INPUT, "h-11 min-w-0 flex-1")}
+                    className={cn(INPUT, "h-11 min-w-0 tablet:flex-1")}
                   />
                   <button
                     type="button"

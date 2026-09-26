@@ -228,54 +228,63 @@ Real `<button>` elements everywhere, `aria-label` on every icon-only control,
 `role="img"` plus a descriptive label on the decorative SVG illustrations, and
 `aria-hidden` on purely decorative glyphs.
 
-## Phase 1 limitations (intentional)
+## Frontend interactivity (browser-only)
 
-Everything below is **presentation only** and must stay that way until its phase:
+The approved UI is interactive, with everything running in the browser: React state,
+browser APIs and the existing components. There is no API route, database, auth or
+server persistence. State lives in `lib/use-campus-state.ts`, and `components/CampusApp.tsx`
+wires it into the shell shared by `/` and `/events/[id]`.
 
-- The search field is read-only and searches nothing.
-- Sidebar categories do not filter; selection is fixed to "Happening Now".
-- Filter pills do not filter; the active pill is fixed to "Trending".
-- Map controls do not pan or zoom.
-- "Post Event" opens no modal; "I'm Going" records no RSVP; "Directions" routes nowhere.
-- The notification bell and account menu open nothing.
-- The user location dot is decorative — no geolocation is ever requested.
-- Event data is the static array in `data/mock-events.ts`. Only "Free Pizza" drives the
-  drawer.
-- `mapX` / `mapY` are normalised percentages of the placeholder map surface (measured
-  from the reference), not geographic coordinates.
-- All imagery is local SVG or CSS. The prototype renders with zero network image
-  requests.
+| Feature | How it works |
+| --- | --- |
+| Pan / zoom | `components/map/use-map-view.ts` transforms the map layer with motion values (no React re-render while dragging). Drag, wheel/trackpad, pinch, arrow keys, and the +/− controls; zoom 1×–3×. Pins, labels and the user dot sit on counter-scaled `MapAnchor`s, so they stay aligned and constant-size. |
+| Marker selection | Every pin selects its event, opens the drawer and gets the selected glow. |
+| Event drawer | Fully data-driven. Built-in pizza keeps its bespoke hero; other events use `CategoryHeroArt`. |
+| Geolocation | `lib/use-geolocation.ts`. Requested **only** when Near Me or the locate control is used, never on load. Kept in memory only (never sent or stored). `watchPosition` moves the dot. After a denial it never re-prompts and shows a subtle message instead. Off-campus positions are explained, not faked. `lib/geo.ts` projects lat/lng onto the stylised map. |
+| Search | Local events only: title, category, location and host. Filters the pins live and offers a keyboard-navigable result list. |
+| Filters | Sidebar categories + Saved, the single-select Trending / Near Me / Free Food pills, and the Today / All Categories menus all compose. An empty state offers "Show all events". |
+| I'm Going / Saved | Per-event toggles in memory; counts update locally. Saved has a sidebar count and filter. Reset on refresh by design. |
+| Directions | Standard Google Maps walking link in a new tab (no maps SDK). Session events route to their pin's coordinates. |
+| Post Event | `CreateEventModal` → "Choose on map" (tap the map; Esc cancels) → the new event appears as a marker immediately. |
+| Temporary events | Exist only in the current session and disappear on refresh. The drawer says so, share explains that links need persistence, and they never get a URL. |
+| Routes / share | `/events/[id]` is statically generated for built-in events (unknown IDs 404). Selecting an event syncs the URL and tab title via `history.replaceState`. Share uses the native share sheet or copies the link. |
+
+Intentional visual changes from the approved baseline: the location dot only renders
+from a real browser location (it used to be decorative), and the drawer hero gained
+Save and Share buttons beside the close button.
+
+Still presentation-only: the notification bell, the account menu, the campus stats
+figures, and the mock events' distance and time strings.
 
 ## Phase 2: Mapbox integration
 
-`CampusMapPlaceholder` is the single seam. It owns the static illustration, the campus
-labels, the markers, the decorative user dot and the map controls, and it accepts the
-props a real map component needs:
+`CampusMapPlaceholder` is the single seam. It owns the static illustration, labels,
+markers, user dot and controls, and exposes the camera through `viewRef`
+(`centerOn`, `reset`):
 
 ```ts
-{ events: CampusEvent[]; selectedEventId: string | null; onSelectEvent: (id: string) => void }
+{
+  events: CampusEvent[]; selectedEventId: string | null; onSelectEvent: (id: string) => void;
+  viewRef?: Ref<MapViewHandle>; userPoint?: MapPoint | null; onLocate: () => void;
+  onPickPoint?: (point: MapPoint) => void; draftPin?: MapPoint & {...} | null;
+}
 ```
 
 To integrate Mapbox:
 
-1. Add `CampusMap.tsx` beside the placeholder with the **same props**, and swap the one
-   import in `page.tsx`.
-2. Delete `CampusMapArt.tsx` — it is imported only by the placeholder and must not leak
-   into any other component.
-3. Replace `mapX` / `mapY` on `CampusEvent` with real `lng` / `lat` and move
-   `MAP_LABELS` into the Mapbox style instead of HTML overlays.
-4. Keep `EventMarker`, `MapFilters`, `CampusStats` and `MapControls` as overlays — only
-   `MapControls` needs wiring to the Mapbox camera.
+1. Add `CampusMap.tsx` with the **same props and handle**, and swap the import in
+   `CampusApp.tsx`.
+2. Delete `CampusMapArt.tsx` and `use-map-view.ts`; Mapbox owns the camera.
+3. Replace `mapX` / `mapY` with real `lng` / `lat`, and drop the `lib/geo.ts` projection.
+4. Keep `MapFilters`, `CampusStats`, `MapToast` and the drawer as overlays.
 5. Keep the map desaturated so event markers stay the most saturated thing on screen.
 
 ## Future backend integration
 
 - Replace `MOCK_EVENTS` with a typed fetch; `CampusEvent` is already the wire shape.
-- Event creation behind "Post Event", RSVP behind "I'm Going", saved events behind the
-  sidebar "Saved" item.
-- Real search and category/filter querying, driven by the existing UI.
+- Persist posted events (then drop `isTemporary` and give them `/events/[id]` URLs),
+  RSVPs, and saved events.
 - Auth for the account cluster, and real counts for the campus stats bar.
-- Geolocation for the user dot and the "N min away" distance, and a directions handoff.
 
 None of this belongs in the visual components: keep data fetching in server components
 or dedicated hooks, and keep the presentational components taking plain props.

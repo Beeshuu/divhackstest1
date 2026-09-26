@@ -20,6 +20,7 @@ import { CATEGORY_STYLE } from "@/lib/constants";
 import { geoToMap, isOnMap } from "@/lib/geo";
 import { eventPath, useCampusState } from "@/lib/use-campus-state";
 import { useGeolocation, type GeoStatus } from "@/lib/use-geolocation";
+import { useMediaQuery } from "@/lib/use-media-query";
 import type { CampusEvent, EventDraft, MapPill } from "@/types/event";
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -86,6 +87,9 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
   const geo = useGeolocation();
   const [composer, setComposer] = useState<"closed" | "form" | "picking">("closed");
   const [draft, setDraft] = useState<EventDraft>(() => emptyDraft());
+  // The mobile bottom sheet would cover the map while choosing a spot.
+  const isSheet = useMediaQuery("(max-width: 899px)");
+  const showDrawer = state.drawerOpen && !(isSheet && composer === "picking");
 
   const openComposer = () => {
     setSidebarOpen(false);
@@ -174,7 +178,7 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
             type="button"
             aria-label="Close navigation menu"
             onClick={() => setSidebarOpen(false)}
-            className="fixed inset-0 top-[72px] z-30 bg-ink/25 tablet:hidden"
+            className="fixed inset-0 top-[72px] z-[55] bg-ink/25 tablet:hidden"
           />
         )}
 
@@ -237,7 +241,7 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
         />
 
         <AnimatePresence initial={false}>
-          {state.drawerOpen && (
+          {showDrawer && (
             <EventDrawer
               event={state.selectedEvent}
               onClose={state.closeDrawer}

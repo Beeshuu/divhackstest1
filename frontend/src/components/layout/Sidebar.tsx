@@ -55,7 +55,7 @@ export function Sidebar({ isOpen, onClose, selected: selectedFilter, onSelect, s
     <aside
       aria-label="Event categories"
       className={cn(
-        "fixed bottom-0 left-0 top-[72px] z-40 flex w-[276px] shrink-0 flex-col overflow-y-auto border-r border-line-strong bg-rail px-4 pt-4 shadow-float transition-transform duration-200 ease-out scrollbar-none",
+        "fixed bottom-0 left-0 top-[72px] z-[60] flex w-[276px] shrink-0 flex-col overflow-y-auto border-r border-line-strong bg-rail px-4 pt-4 shadow-float transition-transform duration-200 ease-out scrollbar-none",
         "tablet:static tablet:z-auto tablet:w-[236px] tablet:translate-x-0 tablet:px-3.5 tablet:shadow-none desktop:w-[276px] desktop:px-4",
         isOpen ? "translate-x-0" : "-translate-x-full",
       )}
