@@ -1,12 +1,12 @@
 /**
- * Maps real GPS coordinates onto the Morningside Heights campus plan and back.
+ * Maps real GPS coordinates onto the illustrated Morningside Heights map.
  *
- * The artwork is the official-style campus diagram (110th–122nd Street,
- * Riverside Drive to Morningside Drive): avenues are drawn vertical and
- * streets horizontal, the same convention as Columbia's printed maps.
- * Google/Apple Maps use true north, so Broadway slants relative to
- * Amsterdam. Inverse-distance weighting across real intersections absorbs
- * that slant and drops pins on the matching block.
+ * The drawing uses the same convention as Columbia's printed maps: avenues
+ * run vertical, streets run horizontal, covering 110th–122nd Street from
+ * Riverside Drive to Morningside Drive. Google/Apple Maps use true north, so
+ * Broadway slants relative to Amsterdam. Inverse-distance weighting across
+ * the real intersections absorbs that slant and drops pins on the matching
+ * block of the illustration.
  */
 
 export interface LatLng {
@@ -21,15 +21,14 @@ export interface MapPoint {
   y: number;
 }
 
-/** Pixel size of `/maps/columbia-morningside.png`. */
+/** Pixel size of the illustrated campus SVG (`CampusMapArt`). */
 export const MAP_ART = {
-  src: "/maps/columbia-morningside.png",
   width: 810,
   height: 1048,
 } as const;
 
-/** Street and avenue crossings as they appear on the campus plan. */
-const PLAN = {
+/** Street and avenue crossings shared by the illustration and the projection. */
+export const PLAN = {
   x: {
     riverside: 12.1,
     claremont: 23.83,

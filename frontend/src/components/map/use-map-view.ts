@@ -12,9 +12,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { MAP_ART, type MapPoint } from "@/lib/geo";
 
 const MIN_SCALE = 1;
-const MAX_SCALE = 3.4;
+const MAX_SCALE = 4;
 /** How far past the drawn edge the map may be dragged, in screen px. */
-const PAN_SLACK = 120;
+const PAN_SLACK = 80;
+/** College Walk / Low Library — the default camera target. */
+const HOME = { x: 52, y: 49 };
 const TAP_TOLERANCE = 5;
 const EASE = [0.32, 0.72, 0, 1] as const;
 
@@ -25,6 +27,8 @@ export interface MapLayerSize {
 
 export interface MapView {
   viewportRef: React.RefObject<HTMLDivElement | null>;
+  /** Clipping frame used to measure the visible map pane. */
+  paneRef: React.RefObject<HTMLDivElement | null>;
   x: MotionValue<number>;
   y: MotionValue<number>;
   scale: MotionValue<number>;
@@ -49,7 +53,19 @@ const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v
 
 function fitLayer(vw: number, vh: number): MapLayerSize {
   const fit = Math.min(vw / MAP_ART.width, vh / MAP_ART.height);
-  return { w: MAP_ART.width * fit, h: MAP_ART.height * fit };
+  return { w: Math.max(1, MAP_ART.width * fit), h: Math.max(1, MAP_ART.height * fit) };
+}
+
+/** Scale that fills the pane (Google-style crop) from a contained layer. */
+function fillScale(vw: number, vh: number, layer: MapLayerSize) {
+  return Math.max(vw / layer.w, vh / layer.h, MIN_SCALE);
+}
+
+function framePoint(vw: number, vh: number, layer: MapLayerSize, point: MapPoint, s: number) {
+  return {
+    x: vw / 2 - (s * layer.w * point.x) / 100,
+    y: vh / 2 - (s * layer.h * point.y) / 100,
+  };
 }
 
 /**
@@ -59,6 +75,7 @@ function fitLayer(vw: number, vh: number): MapLayerSize {
  */
 export function useMapView(onTap?: (point: MapPoint) => void): MapView {
   const viewportRef = useRef<HTMLDivElement | null>(null);
+  const paneRef = useRef<HTMLDivElement | null>(null);
   const x = useMotionValue(0);
   const y = useMotionValue(0);
   const scale = useMotionValue(1);
@@ -77,7 +94,7 @@ export function useMapView(onTap?: (point: MapPoint) => void): MapView {
   }, [onTap]);
 
   const size = () => {
-    const rect = viewportRef.current?.getBoundingClientRect();
+    const rect = (paneRef.current ?? viewportRef.current)?.getBoundingClientRect();
     return { w: rect?.width ?? 1, h: rect?.height ?? 1, left: rect?.left ?? 0, top: rect?.top ?? 0 };
   };
 
@@ -109,17 +126,23 @@ export function useMapView(onTap?: (point: MapPoint) => void): MapView {
   );
 
   useEffect(() => {
-    const el = viewportRef.current;
+    const el = paneRef.current ?? viewportRef.current;
     if (!el) return;
     const apply = () => {
       const { width: vw, height: vh } = el.getBoundingClientRect();
       if (vw < 2 || vh < 2) return;
       const next = fitLayer(vw, vh);
+      const previous = layerRef.current;
       layerRef.current = next;
       setLayer(next);
-      if (scale.get() <= 1.01) {
-        x.set((vw - next.w) / 2);
-        y.set((vh - next.h) / 2);
+      const home = fillScale(vw, vh, next);
+      const atHome = Math.abs(scale.get() - fillScale(vw, vh, previous)) < 0.04 || scale.get() <= 1.01;
+      if (atHome) {
+        const frame = framePoint(vw, vh, next, HOME, home);
+        const held = clampTranslate(frame.x, frame.y, home);
+        scale.set(home);
+        x.set(held.x);
+        y.set(held.y);
       } else {
         const held = clampTranslate(x.get(), y.get(), scale.get());
         x.set(held.x);
@@ -173,8 +196,10 @@ export function useMapView(onTap?: (point: MapPoint) => void): MapView {
 
   const reset = useCallback(() => {
     const { w: vw, h: vh } = size();
-    const { w: lw, h: lh } = layerRef.current;
-    animateTo((vw - lw) / 2, (vh - lh) / 2, 1);
+    const layer = layerRef.current;
+    const s = fillScale(vw, vh, layer);
+    const frame = framePoint(vw, vh, layer, HOME, s);
+    animateTo(frame.x, frame.y, s);
   }, [animateTo]);
 
   // Wheel / trackpad zoom needs a non-passive listener to stop page zoom.
@@ -273,6 +298,7 @@ export function useMapView(onTap?: (point: MapPoint) => void): MapView {
 
   return {
     viewportRef,
+    paneRef,
     x,
     y,
     scale,
