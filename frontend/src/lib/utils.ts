@@ -42,7 +42,20 @@ export function todayLabel(now: Date = new Date()): string {
   return `Today, ${now.toLocaleDateString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric" })}`;
 }
 
-export function isEventToday(event: { dateLabel: string }): boolean {
+function newYorkDay(value: Date): string {
+  return value.toLocaleDateString("en-US", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+}
+
+export function isEventToday(event: { dateLabel: string; startsAt?: string }, now: Date = new Date()): boolean {
+  if (event.startsAt) {
+    const start = new Date(event.startsAt);
+    if (!Number.isNaN(start.valueOf())) return newYorkDay(start) === newYorkDay(now);
+  }
   return event.dateLabel.startsWith("Today");
 }
 

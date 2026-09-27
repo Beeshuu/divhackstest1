@@ -49,6 +49,8 @@ export interface CampusEvent {
   startTime: string;
   endTime: string;
   dateLabel: string;
+  /** ISO start used to decide whether the event is today. */
+  startsAt?: string;
   goingCount: number;
   interestedCount: number;
   host: string;

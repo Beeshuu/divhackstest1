@@ -204,6 +204,7 @@ function toCampusEvent({ id, title, description, location, start, end, url, host
     startTime: clockOf(whenStart),
     endTime: clockOf(whenEnd),
     dateLabel: dateLabelOf(whenStart),
+    startsAt: whenStart.toISOString(),
     goingCount: 0,
     interestedCount: 0,
     host: decode(host) || "University Life",

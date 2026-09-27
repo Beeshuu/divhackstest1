@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { CATEGORY_STYLE } from "./constants";
-import { formatClock, timeStatusFor, todayLabel } from "./utils";
+import { formatClock, isEventToday, timeStatusFor, todayLabel } from "./utils";
 import { FEATURED_EVENT_ID, MOCK_EVENTS } from "@/data/mock-events";
 import type {
   CampusEvent,
@@ -101,7 +101,7 @@ export function useCampusState(initialEventId?: string) {
         if (sidebarFilter === "remote") return event.locationKind === "remote";
         if (event.locationKind === "tbd" || event.locationKind === "remote") return false;
         if (categoryFilter !== "all" && event.category !== categoryFilter) return false;
-        if (dateFilter === "today" && !event.dateLabel.startsWith("Today")) return false;
+        if (dateFilter === "today" && !isEventToday(event)) return false;
         return true;
       }),
     [events, query, sidebarFilter, saved, categoryFilter, dateFilter],
@@ -162,6 +162,7 @@ export function useCampusState(initialEventId?: string) {
         startTime: formatClock(draft.startTime),
         endTime: formatClock(draft.endTime),
         dateLabel: todayLabel(),
+        startsAt: new Date().toISOString(),
         goingCount: 0,
         interestedCount: 0,
         host: "You",
