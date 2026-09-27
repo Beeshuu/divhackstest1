@@ -257,10 +257,13 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
           onClose={() => setSidebarOpen(false)}
           selected={state.sidebarFilter}
           onSelect={(filter) => {
-            const closingLocation =
-              (filter === "tbd" || filter === "remote" || filter === "userLed") &&
+            const closingPanel =
+              (filter === "tbd" ||
+                filter === "remote" ||
+                filter === "userLed" ||
+                filter === "saved") &&
               state.sidebarFilter === filter;
-            const next = closingLocation ? "all" : filter;
+            const next = closingPanel ? "all" : filter;
             state.setSidebarFilter(next);
             if (next === "all") {
               state.setDateFilter("today");

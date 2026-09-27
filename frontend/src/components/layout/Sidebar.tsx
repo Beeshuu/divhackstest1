@@ -80,7 +80,8 @@ export function Sidebar({
             <button
               key={item.label}
               type="button"
-              aria-current={selected ? "page" : undefined}
+              aria-current={item.filter === "all" && selected ? "page" : undefined}
+              aria-pressed={item.filter === "saved" ? selected : undefined}
               onClick={() => onSelect(item.filter)}
               className={cn(
                 "flex h-[49px] items-center gap-[18px] rounded-[13px] px-[18px] text-left text-[15.5px] transition-colors duration-150 ease-out",
