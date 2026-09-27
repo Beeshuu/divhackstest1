@@ -149,9 +149,16 @@ export function answerCampusQuestion(
     };
   }
 
+  if (includesAny(query, ["forgot password", "reset password", "reset my password"])) {
+    return {
+      text: "On Sign In, tap Forgot password? and enter the phone number on your account. Use the 6-digit code to set a new password.",
+      matches: [],
+    };
+  }
+
   if (includesAny(query, ["profile", "password", "privacy", "settings", "hosted", "attended", "account"])) {
     return {
-      text: "Tap your avatar for Profile (Going, Hosted, Attended) and Settings (account info, change password, profile privacy).",
+      text: "Tap your avatar for Profile (Going, Hosted, Attended) and Settings (account info, change password, profile privacy). On Sign In, Forgot password? resets with a code to your phone.",
       matches: [],
     };
   }

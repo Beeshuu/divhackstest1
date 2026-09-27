@@ -44,6 +44,8 @@ interface AuthValue {
   status: AuthStatus;
   signUp: (input: SignUpInput) => Promise<void>;
   signIn: (identifier: string, password: string) => Promise<void>;
+  requestPasswordReset: (phone: string) => Promise<{ phoneHint: string; demoCode?: string }>;
+  resetPassword: (phone: string, code: string, newPassword: string) => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (input: ProfileUpdate) => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
@@ -139,6 +141,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [adopt],
   );
 
+  const requestPasswordReset = useCallback(async (phone: string) => {
+    const response = await fetch("/api/auth/forgot-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone }),
+    });
+    if (!response.ok) throw await errorFrom(response, "Could not send a reset code.");
+    const body = await response.json();
+    return {
+      phoneHint: typeof body.phoneHint === "string" ? body.phoneHint : "your phone",
+      demoCode: typeof body.demoCode === "string" ? body.demoCode : undefined,
+    };
+  }, []);
+
+  const resetPassword = useCallback(
+    async (phone: string, code: string, newPassword: string) => {
+      const response = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone, code, newPassword }),
+      });
+      if (!response.ok) throw await errorFrom(response, "Could not reset your password.");
+      const body = await response.json();
+      adopt(body.token, body.user);
+    },
+    [adopt],
+  );
+
   const signOut = useCallback(async () => {
     const token = readToken();
     window.localStorage.removeItem(TOKEN_KEY);
@@ -187,8 +217,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, status, signUp, signIn, signOut, updateProfile, changePassword, authFetch }),
-    [user, status, signUp, signIn, signOut, updateProfile, changePassword, authFetch],
+    () => ({
+      user,
+      status,
+      signUp,
+      signIn,
+      requestPasswordReset,
+      resetPassword,
+      signOut,
+      updateProfile,
+      changePassword,
+      authFetch,
+    }),
+    [user, status, signUp, signIn, requestPasswordReset, resetPassword, signOut, updateProfile, changePassword, authFetch],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

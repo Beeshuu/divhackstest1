@@ -1,7 +1,7 @@
 import express from 'express';
 import http from 'node:http';
 import net from 'node:net';
-import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
+import { randomBytes, randomInt, scryptSync, timingSafeEqual } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -70,6 +70,19 @@ const existingUserColumns = new Set(db.prepare('PRAGMA table_info(users)').all()
 if (!existingUserColumns.has('profile_private')) {
   db.exec('ALTER TABLE users ADD COLUMN profile_private INTEGER NOT NULL DEFAULT 0');
 }
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS password_resets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    phone TEXT NOT NULL,
+    code_salt TEXT NOT NULL,
+    code_hash TEXT NOT NULL,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    expires_at TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  )
+`);
 
 // The first release stored only coordinates and a title; the map needs more.
 const EVENT_COLUMN_ADDITIONS = {
@@ -165,6 +178,28 @@ function passwordMatches(password, salt, expectedHash) {
   const actual = scryptSync(password, salt, 64);
   const expected = Buffer.from(expectedHash, 'hex');
   return actual.length === expected.length && timingSafeEqual(actual, expected);
+}
+
+function phoneDigits(value) {
+  return String(value ?? '').replace(/\D/g, '');
+}
+
+function findUserByPhone(phone) {
+  const clean = typeof phone === 'string' ? phone.trim() : '';
+  if (!clean) return null;
+  const exact = db.prepare('SELECT * FROM users WHERE phone = ?').get(clean);
+  if (exact) return exact;
+  const digits = phoneDigits(clean);
+  if (digits.length < 7) return null;
+  return (
+    db.prepare('SELECT * FROM users').all().find((row) => phoneDigits(row.phone) === digits) ?? null
+  );
+}
+
+function maskPhone(phone) {
+  const digits = phoneDigits(phone);
+  if (digits.length < 4) return 'your phone';
+  return `•••• ${digits.slice(-4)}`;
 }
 
 function startSession(userId) {
@@ -310,6 +345,81 @@ app.post('/api/auth/logout', (request, response) => {
   const token = bearerToken(request);
   if (token) db.prepare('DELETE FROM sessions WHERE token = ?').run(token);
   response.status(204).end();
+});
+
+app.post('/api/auth/forgot-password', (request, response) => {
+  const phone = typeof request.body?.phone === 'string' ? request.body.phone.trim() : '';
+  if (!phone) return response.status(400).json({ error: 'Enter the phone number on your account.' });
+
+  const account = findUserByPhone(phone);
+  if (!account) {
+    return response.status(404).json({ error: 'No account uses that phone number.' });
+  }
+
+  const latest = db
+    .prepare('SELECT created_at FROM password_resets WHERE user_id = ? ORDER BY created_at DESC LIMIT 1')
+    .get(account.id);
+  if (latest && Date.now() - new Date(latest.created_at).getTime() < 45_000) {
+    return response.status(429).json({ error: 'Wait a moment before requesting another code.' });
+  }
+
+  const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
+  const { salt, hash } = hashPassword(code);
+  const now = new Date();
+  db.prepare('DELETE FROM password_resets WHERE user_id = ?').run(account.id);
+  db.prepare(
+    `INSERT INTO password_resets (user_id, phone, code_salt, code_hash, expires_at, created_at)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+  ).run(account.id, account.phone, salt, hash, new Date(now.getTime() + 10 * 60 * 1000).toISOString(), now.toISOString());
+
+  console.log(`Password reset code for ${maskPhone(account.phone)}: ${code}`);
+  response.json({
+    sent: true,
+    phoneHint: maskPhone(account.phone),
+    expiresInMinutes: 10,
+    // No SMS provider is configured, so the UI shows this code in the reset form.
+    demoCode: code,
+  });
+});
+
+app.post('/api/auth/reset-password', (request, response) => {
+  const phone = typeof request.body?.phone === 'string' ? request.body.phone.trim() : '';
+  const code = typeof request.body?.code === 'string' ? request.body.code.replace(/\D/g, '') : '';
+  const newPassword = request.body?.newPassword;
+
+  if (!phone) return response.status(400).json({ error: 'Enter the phone number on your account.' });
+  if (code.length !== 6) return response.status(400).json({ error: 'Enter the 6-digit code we sent.' });
+  if (typeof newPassword !== 'string' || newPassword.length < 8) {
+    return response.status(400).json({ error: 'New password must be at least 8 characters.' });
+  }
+
+  const account = findUserByPhone(phone);
+  if (!account) return response.status(404).json({ error: 'No account uses that phone number.' });
+
+  const reset = db
+    .prepare('SELECT * FROM password_resets WHERE user_id = ? ORDER BY created_at DESC LIMIT 1')
+    .get(account.id);
+  if (!reset) return response.status(400).json({ error: 'Request a new code, then try again.' });
+  if (new Date(reset.expires_at).getTime() <= Date.now()) {
+    db.prepare('DELETE FROM password_resets WHERE id = ?').run(reset.id);
+    return response.status(400).json({ error: 'That code expired. Request a new one.' });
+  }
+  if (reset.attempts >= 5) {
+    db.prepare('DELETE FROM password_resets WHERE id = ?').run(reset.id);
+    return response.status(401).json({ error: 'Too many tries. Request a new code.' });
+  }
+  if (!passwordMatches(code, reset.code_salt, reset.code_hash)) {
+    db.prepare('UPDATE password_resets SET attempts = attempts + 1 WHERE id = ?').run(reset.id);
+    return response.status(401).json({ error: 'That code is incorrect.' });
+  }
+
+  const { salt, hash } = hashPassword(newPassword);
+  db.prepare('UPDATE users SET password_salt = ?, password_hash = ? WHERE id = ?').run(salt, hash, account.id);
+  db.prepare('DELETE FROM password_resets WHERE user_id = ?').run(account.id);
+  db.prepare('DELETE FROM sessions WHERE user_id = ?').run(account.id);
+
+  const user = publicUser(db.prepare(`SELECT ${USER_COLUMNS} FROM users WHERE id = ?`).get(account.id));
+  response.json({ token: startSession(user.id), user });
 });
 
 /**
