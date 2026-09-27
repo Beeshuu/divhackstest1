@@ -116,6 +116,7 @@ export function Sidebar({
               key={item.label}
               type="button"
               aria-current={selected ? "page" : undefined}
+              aria-pressed={selected}
               onClick={() => onSelect(item.filter)}
               className={cn(
                 "flex h-[49px] w-full items-center gap-[18px] rounded-[13px] px-[18px] text-left text-[15.5px] transition-colors duration-150 ease-out",

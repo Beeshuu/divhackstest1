@@ -229,8 +229,10 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
           onClose={() => setSidebarOpen(false)}
           selected={state.sidebarFilter}
           onSelect={(filter) => {
-            state.setSidebarFilter(filter);
-            if (filter === "all") {
+            const closingLocation = (filter === "tbd" || filter === "remote") && state.sidebarFilter === filter;
+            const next = closingLocation ? "all" : filter;
+            state.setSidebarFilter(next);
+            if (next === "all") {
               state.setDateFilter("today");
               state.setCategoryFilter("all");
               state.setMapPill("trending");
