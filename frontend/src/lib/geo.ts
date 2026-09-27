@@ -58,7 +58,7 @@ export interface ControlPoint extends LatLng, MapPoint {}
  * Google/Apple positions for the labelled crossings on the plan.
  * Intermediate blocks are spaced from those measured corners.
  */
-const CONTROLS: ControlPoint[] = [
+export const COLUMBIA_CONTROLS: ControlPoint[] = [
   { lat: 40.80385, lng: -73.96675, x: PLAN.x.broadway, y: PLAN.y[110] },
   { lat: 40.80455, lng: -73.96635, x: PLAN.x.broadway, y: PLAN.y[111] },
   { lat: 40.80525, lng: -73.96595, x: PLAN.x.broadway, y: PLAN.y[112] },
@@ -130,11 +130,11 @@ export function unprojectWithControls({ x, y }: MapPoint, controls: ControlPoint
 }
 
 export function geoToMap(point: LatLng): MapPoint {
-  return projectWithControls(point, CONTROLS);
+  return projectWithControls(point, COLUMBIA_CONTROLS);
 }
 
 export function mapToGeo(point: MapPoint): LatLng {
-  return unprojectWithControls(point, CONTROLS);
+  return unprojectWithControls(point, COLUMBIA_CONTROLS);
 }
 
 /** True when a point falls on the drawn campus plan. */
