@@ -141,12 +141,21 @@ export function useCampusState(
         .map((row) => communityEventFromApi(row as Parameters<typeof communityEventFromApi>[0], userId))
         .filter((event): event is CampusEvent => Boolean(event));
       setCommunityEvents(mapped);
-      setCreatedEvents((prev) =>
-        prev.filter(
+      setCreatedEvents((prev) => {
+        const remaining = prev.filter(
           (created) =>
             !mapped.some((live) => live.hostedByMe && live.title === created.title && live.source === "user"),
-        ),
-      );
+        );
+        setSelectedId((current) => {
+          const replaced = prev.find((created) => created.id === current);
+          if (!replaced) return current;
+          const live = mapped.find(
+            (event) => event.hostedByMe && event.title === replaced.title && event.source === "user",
+          );
+          return live?.id ?? current;
+        });
+        return remaining;
+      });
     } catch {
       // Seeded student events still fill User Led Events if the API is down.
     }
