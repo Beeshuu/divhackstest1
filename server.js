@@ -1,4 +1,6 @@
 import express from 'express';
+import http from 'node:http';
+import net from 'node:net';
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -78,6 +80,7 @@ for (const [column, definition] of Object.entries(EVENT_COLUMN_ADDITIONS)) {
 
 const app = express();
 const port = Number(process.env.PORT) || 3000;
+const frontendPort = Number(process.env.FRONTEND_PORT) || 3001;
 const campus = { south: 40.8036, west: -73.9669, north: 40.8168, east: -73.9505 };
 
 function isOnCampus(latitude, longitude) {
@@ -344,6 +347,55 @@ app.delete('/api/events/:id/join', requireUser, (request, response) => {
   response.json(findEvent(event.id, request.user.id));
 });
 
-app.listen(port, '0.0.0.0', () => {
+function proxyFrontend(request, response) {
+  const upstream = http.request(
+    {
+      hostname: '127.0.0.1',
+      port: frontendPort,
+      path: request.originalUrl,
+      method: request.method,
+      headers: { ...request.headers, host: `127.0.0.1:${frontendPort}` },
+    },
+    (incoming) => {
+      response.writeHead(incoming.statusCode ?? 502, incoming.headers);
+      incoming.pipe(response);
+    },
+  );
+  upstream.on('error', () => {
+    if (response.headersSent) return;
+    response.status(503).type('html').send(`<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Campus Connect</title></head>
+<body style="font-family:Inter,system-ui,sans-serif;padding:48px;color:#0f2547">
+  <h1>Campus Connect</h1>
+  <p>The map UI is not running yet. In another terminal:</p>
+  <pre>cd frontend && npm run dev -- -p ${frontendPort}</pre>
+</body></html>`);
+  });
+  request.pipe(upstream);
+}
+
+// Browser requests go to the Next.js app; /api/* stays on this server.
+app.use((request, response) => {
+  proxyFrontend(request, response);
+});
+
+const server = app.listen(port, '0.0.0.0', () => {
   console.log(`Campus Connect is running at http://localhost:${port}`);
+});
+
+server.on('upgrade', (request, socket, head) => {
+  if ((request.url ?? '').startsWith('/api')) {
+    socket.destroy();
+    return;
+  }
+  const upstream = net.connect(frontendPort, '127.0.0.1', () => {
+    const headerLines = Object.entries(request.headers)
+      .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
+      .join('\r\n');
+    upstream.write(`${request.method} ${request.url} HTTP/1.1\r\n${headerLines}\r\n\r\n`);
+    if (head.length) upstream.write(head);
+    upstream.pipe(socket);
+    socket.pipe(upstream);
+  });
+  upstream.on('error', () => socket.destroy());
 });
