@@ -9,13 +9,6 @@ import { fileURLToPath } from 'node:url';
 import { loadOfficialEvents } from './official-events.js';
 import { loadUniversityLifeEvents } from './university-life.js';
 import {
-  evaluateDonationPolicy,
-  listDonationAudit,
-  publicDonateStatus,
-  settleDonation,
-  dailySpentXrp,
-} from './xrpl-agent.js';
-import {
   getSpectrumApp,
   handleSpectrumWebhook,
   listenSpectrumMessages,
@@ -150,24 +143,6 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   )
 `);
-db.exec(`
-  CREATE TABLE IF NOT EXISTS donation_audit (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL REFERENCES users(id),
-    cause_id TEXT NOT NULL DEFAULT '',
-    amount_xrp TEXT NOT NULL DEFAULT '',
-    destination TEXT NOT NULL DEFAULT '',
-    decision TEXT NOT NULL,
-    reason TEXT,
-    policy_json TEXT,
-    funding_hash TEXT,
-    payment_hash TEXT,
-    ledger_index INTEGER,
-    explorer_url TEXT,
-    created_at TEXT NOT NULL
-  )
-`);
-
 const eventImageDirectory = join(dataDirectory, 'event-images');
 mkdirSync(eventImageDirectory, { recursive: true });
 const MAX_EVENT_IMAGES = 4;
@@ -823,52 +798,6 @@ app.get('/api/official-events', async (request, response) => {
     response.json(await loadOfficialEvents(request.query.campus));
   } catch (error) {
     response.status(502).json({ error: 'Could not refresh official campus events.', detail: String(error.message ?? error) });
-  }
-});
-
-app.get('/api/donate', requireUser, (request, response) => {
-  const status = publicDonateStatus(db, request.user);
-  response.json({
-    ...status,
-    recent: listDonationAudit(db, request.user.id),
-  });
-});
-
-app.post('/api/donate/preview', requireUser, (request, response) => {
-  const amountXrp = Number(request.body?.amountXrp);
-  const causeId = typeof request.body?.causeId === 'string' ? request.body.causeId : '';
-  const memo = typeof request.body?.memo === 'string' ? request.body.memo.trim() : '';
-  const verdict = evaluateDonationPolicy({
-    user: request.user,
-    causeId,
-    amountXrp,
-    memo,
-    spentTodayXrp: dailySpentXrp(db, request.user.id),
-  });
-  response.status(verdict.allowed ? 200 : 403).json(verdict);
-});
-
-app.post('/api/donate', requireUser, async (request, response) => {
-  const amountXrp = Number(request.body?.amountXrp);
-  const causeId = typeof request.body?.causeId === 'string' ? request.body.causeId : '';
-  const memo = typeof request.body?.memo === 'string' ? request.body.memo.trim() : '';
-  try {
-    const result = await settleDonation(db, {
-      user: request.user,
-      causeId,
-      amountXrp,
-      memo,
-    });
-    if (result.payment?.hash) {
-      response.setHeader('X-Payment-Network', 'xrpl-testnet');
-      response.setHeader('X-Payment-Tx', result.payment.hash);
-    }
-    response.status(result.allowed && result.code === 'settled' ? 201 : 403).json(result);
-  } catch (error) {
-    console.error('XRPL donation failed:', error);
-    response.status(503).json({
-      error: error.message || 'The campus agent could not settle on XRPL Testnet right now.',
-    });
   }
 });
 

@@ -185,13 +185,6 @@ export function answerCampusQuestion(
     };
   }
 
-  if (includesAny(query, ["donate", "donation", "ripple", "xrpl", "xrp", "gift"])) {
-    return {
-      text: "Donate is the teal button at the bottom of the sidebar. Pick a campus fund and an XRP amount. The Campus Donation Agent checks identity, allowlisted destinations, and spending limits, then settles on XRPL Testnet. Max 10 XRP per gift and 25 XRP per day. You never hold the campus seed.",
-      matches: [],
-    };
-  }
-
   if (includesAny(query, ["save", "bookmark"])) {
     return {
       text: "Open an event and tap the bookmark. Saved listings collect under Saved in the sidebar.",
