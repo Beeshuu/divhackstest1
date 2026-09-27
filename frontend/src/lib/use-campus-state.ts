@@ -58,7 +58,7 @@ export function useCampusState(initialEventId?: string) {
   const [query, setQuery] = useState("");
   const [sidebarFilter, setSidebarFilter] = useState<SidebarFilter>("all");
   const [mapPill, setMapPill] = useState<MapPill>("trending");
-  const [dateFilter, setDateFilter] = useState<DateFilter>("today");
+  const [dateFilter, setDateFilter] = useState<DateFilter>("any");
   const [categoryFilter, setCategoryFilter] = useState<EventCategory | "all">("all");
   const [toast, setToast] = useState<Toast | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
