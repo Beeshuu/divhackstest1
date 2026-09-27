@@ -136,10 +136,15 @@ export function useCampusState(
       if (!response.ok) return;
       const body: unknown = await response.json();
       const rows = Array.isArray(body) ? body : [];
-      setCommunityEvents(
-        rows
-          .map((row) => communityEventFromApi(row as Parameters<typeof communityEventFromApi>[0], userId))
-          .filter((event): event is CampusEvent => Boolean(event)),
+      const mapped = rows
+        .map((row) => communityEventFromApi(row as Parameters<typeof communityEventFromApi>[0], userId))
+        .filter((event): event is CampusEvent => Boolean(event));
+      setCommunityEvents(mapped);
+      setCreatedEvents((prev) =>
+        prev.filter(
+          (created) =>
+            !mapped.some((live) => live.hostedByMe && live.title === created.title && live.source === "user"),
+        ),
       );
     } catch {
       // Seeded student events still fill User Led Events if the API is down.

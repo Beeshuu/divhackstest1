@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, type ComponentType } from "react";
+import type { ComponentType } from "react";
 import { motion, type MotionValue } from "framer-motion";
 import { BookOpen, BriefcaseBusiness, GraduationCap, Music, Users } from "lucide-react";
 
@@ -79,26 +79,24 @@ export function MarkerPin({
   const Icon = MARKER_ICONS[iconType];
   const width = selected ? 39 : 34;
   const height = selected ? 50 : 44;
-  const clipId = useId().replace(/:/g, "");
   return (
     <>
-      <svg viewBox="0 0 34 44" width={width} height={height} aria-hidden className="block">
-        <defs>
-          <clipPath id={clipId}>
-            <path d="M17 43.2c0 0 15.6-17.4 15.6-26.2a15.6 15.6 0 1 0-31.2 0C1.4 25.8 17 43.2 17 43.2Z" />
-          </clipPath>
-        </defs>
-        {imageUrl ? (
-          <image
-            href={imageUrl}
-            x="0"
-            y="0"
-            width="34"
-            height="36"
-            preserveAspectRatio="xMidYMid slice"
-            clipPath={`url(#${clipId})`}
-          />
-        ) : (
+      {imageUrl && (
+        <span
+          aria-hidden
+          className="absolute left-0 top-0 h-[44px] w-[34px] overflow-hidden bg-field"
+          style={{
+            clipPath: 'path("M17 43.2c0 0 15.6-17.4 15.6-26.2a15.6 15.6 0 1 0-31.2 0C1.4 25.8 17 43.2 17 43.2Z")',
+            transform: `scale(${width / 34}, ${height / 44})`,
+            transformOrigin: "top left",
+          }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={imageUrl} alt="" className="h-full w-full object-cover" />
+        </span>
+      )}
+      <svg viewBox="0 0 34 44" width={width} height={height} aria-hidden className="relative block">
+        {!imageUrl && (
           <path
             d="M17 43.2c0 0 15.6-17.4 15.6-26.2a15.6 15.6 0 1 0-31.2 0C1.4 25.8 17 43.2 17 43.2Z"
             fill={palette.solid}
