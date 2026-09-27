@@ -393,7 +393,7 @@ function SettingsView() {
     try {
       await updateProfile({ photonNotificationsEnabled: !user.photonNotificationsEnabled });
     } catch (cause) {
-      setPhotonNoticeError(cause instanceof Error ? cause.message : "Could not update Photon messages.");
+      setPhotonNoticeError(cause instanceof Error ? cause.message : "Could not update campus alerts.");
     } finally {
       setPhotonNoticePending(false);
     }
@@ -611,16 +611,16 @@ function SettingsView() {
       </section>
 
       <section className="border-t border-line pt-5">
-        <h3 className="text-[15px] font-extrabold text-ink">Photon messages</h3>
+        <h3 className="text-[15px] font-extrabold text-ink">Campus alerts</h3>
         <div className="mt-3 flex items-start justify-between gap-4 rounded-[14px] border border-line px-4 py-3.5">
           <div className="min-w-0">
             <p className="flex items-center gap-2 text-[14.5px] font-bold text-ink">
               <Bell size={16} strokeWidth={2.2} aria-hidden className="text-brand" />
-              iMessage campus notifications
+              Text me campus alerts
             </p>
             <p className="mt-1 text-[12.5px] font-medium leading-[1.4] text-muted">
-              When this is on, “I’m Going” and 30-minute reminders also go to your Photon iMessage
-              chat. Sign-in and reset codes still follow two-step verification.
+              When this is on, “I’m Going” and 30-minute reminders also iMessage you. Sign-in and
+              reset codes still follow two-step verification.
             </p>
           </div>
           <button

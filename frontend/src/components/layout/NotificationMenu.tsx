@@ -101,7 +101,7 @@ export function NotificationMenu({
             <div className="flex items-center justify-between px-3 py-2.5">
               <p className="text-[14.5px] font-bold text-ink">Notifications</p>
               <p className="text-[12.5px] font-medium text-muted">
-                {photonEnabled ? "Photon iMessage" : "Campus alerts"}
+                {photonEnabled ? "iMessage on" : "In-app only"}
               </p>
             </div>
             <div aria-hidden className="mx-2 h-px bg-line" />
