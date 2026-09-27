@@ -230,7 +230,7 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
         onNoticesSeen={notices.markSeen}
         query={state.query}
         onQueryChange={state.setQuery}
-        results={state.visibleEvents}
+        results={state.searchResults}
         onSelectResult={(event) => {
           state.selectEvent(event.id);
           mapRef.current?.centerOn({ x: event.mapX, y: event.mapY });
@@ -445,6 +445,16 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
               onToggleSaved={() => state.toggleSaved(selected.id)}
               onShare={() => shareEvent(selected, state.showToast)}
               onDirections={() => setDirectionsEvent(selected)}
+              isRejected={state.rejected.has(selected.id)}
+              onReject={() => {
+                state.rejectEvent(selected.id);
+                state.closeDrawer();
+                state.showToast("This event won’t show on your map unless you search for it.");
+              }}
+              onRestore={() => {
+                state.restoreEvent(selected.id);
+                state.showToast("This event will show on your map again.");
+              }}
             />
           )}
         </AnimatePresence>

@@ -59,10 +59,14 @@ function goingKey(userId?: number) {
   return userId ? `campus-connect-going:${userId}` : "campus-connect-going";
 }
 
-function readGoing(userId?: number): Set<string> {
+function rejectedKey(userId?: number) {
+  return userId ? `campus-connect-rejected:${userId}` : "campus-connect-rejected";
+}
+
+function readIdSet(key: string): Set<string> {
   if (typeof window === "undefined") return new Set();
   try {
-    const raw = window.localStorage.getItem(goingKey(userId));
+    const raw = window.localStorage.getItem(key);
     const parsed = raw ? (JSON.parse(raw) as unknown) : [];
     return new Set(Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === "string") : []);
   } catch {
@@ -77,7 +81,8 @@ export function useCampusState(initialEventId?: string, userId?: number, userNam
   const [createdEvents, setCreatedEvents] = useState<CampusEvent[]>([]);
   const [selectedId, setSelectedId] = useState(initialEventId ?? FEATURED_EVENT_ID);
   const [drawerOpen, setDrawerOpen] = useState(Boolean(initialEventId));
-  const [going, setGoing] = useState<Set<string>>(() => readGoing(userId));
+  const [going, setGoing] = useState<Set<string>>(() => readIdSet(goingKey(userId)));
+  const [rejected, setRejected] = useState<Set<string>>(() => readIdSet(rejectedKey(userId)));
   const [saved, setSaved] = useState<Set<string>>(() => new Set());
   const [query, setQuery] = useState("");
   const [sidebarFilter, setSidebarFilter] = useState<SidebarFilter>("all");
@@ -88,12 +93,17 @@ export function useCampusState(initialEventId?: string, userId?: number, userNam
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    setGoing(readGoing(userId));
+    setGoing(readIdSet(goingKey(userId)));
+    setRejected(readIdSet(rejectedKey(userId)));
   }, [userId]);
 
   useEffect(() => {
     window.localStorage.setItem(goingKey(userId), JSON.stringify([...going]));
   }, [userId, going]);
+
+  useEffect(() => {
+    window.localStorage.setItem(rejectedKey(userId), JSON.stringify([...rejected]));
+  }, [userId, rejected]);
 
   const events = useMemo(
     () => [...liveEvents, ...USER_LED_EVENTS, ...communityEvents, ...MOCK_EVENTS, ...createdEvents],
@@ -138,9 +148,12 @@ export function useCampusState(initialEventId?: string, userId?: number, userNam
     };
   }, [refreshLiveEvents]);
 
+  const searching = query.trim().length > 0;
+
   const visibleEvents = useMemo(
     () =>
       events.filter((event) => {
+        if (rejected.has(event.id)) return searching && matchesQuery(event, query);
         if (!matchesQuery(event, query)) return false;
         if (sidebarFilter === "saved" && !saved.has(event.id)) return false;
         if (sidebarFilter === "tbd") return event.locationKind === "tbd";
@@ -151,7 +164,12 @@ export function useCampusState(initialEventId?: string, userId?: number, userNam
         if (dateFilter === "today" && !isEventToday(event)) return false;
         return true;
       }),
-    [events, query, sidebarFilter, saved, categoryFilter, dateFilter, userName],
+    [events, query, searching, rejected, sidebarFilter, saved, categoryFilter, dateFilter, userName],
+  );
+
+  const searchResults = useMemo(
+    () => events.filter((event) => matchesQuery(event, query)),
+    [events, query],
   );
 
   const showToast = useCallback((message: string) => {
@@ -190,6 +208,35 @@ export function useCampusState(initialEventId?: string, userId?: number, userNam
 
   const toggleGoing = useCallback((id: string) => toggleIn(setGoing, id), []);
   const toggleSaved = useCallback((id: string) => toggleIn(setSaved, id), []);
+
+  const rejectEvent = useCallback((id: string) => {
+    setRejected((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+    setGoing((prev) => {
+      if (!prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+    setSaved((prev) => {
+      if (!prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }, []);
+
+  const restoreEvent = useCallback((id: string) => {
+    setRejected((prev) => {
+      if (!prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }, []);
 
   const createEvent = useCallback(
     (draft: EventDraft, hostName = "You"): CampusEvent | null => {
@@ -245,6 +292,7 @@ export function useCampusState(initialEventId?: string, userId?: number, userNam
     events,
     clearFilters,
     visibleEvents,
+    searchResults,
     selectedEvent,
     drawerOpen,
     selectEvent,
@@ -253,6 +301,9 @@ export function useCampusState(initialEventId?: string, userId?: number, userNam
     toggleGoing,
     saved,
     toggleSaved,
+    rejected,
+    rejectEvent,
+    restoreEvent,
     query,
     setQuery,
     sidebarFilter,
@@ -268,9 +319,9 @@ export function useCampusState(initialEventId?: string, userId?: number, userNam
     showToast,
     dismissToast: () => setToast(null),
     liveStatus,
-    tbdCount: events.filter((event) => event.locationKind === "tbd").length,
-    remoteCount: events.filter((event) => event.locationKind === "remote").length,
-    userLedCount: events.filter((event) => isUserLedEvent(event, userName)).length,
+    tbdCount: events.filter((event) => event.locationKind === "tbd" && !rejected.has(event.id)).length,
+    remoteCount: events.filter((event) => event.locationKind === "remote" && !rejected.has(event.id)).length,
+    userLedCount: events.filter((event) => isUserLedEvent(event, userName) && !rejected.has(event.id)).length,
     refreshLiveEvents,
   };
 }

@@ -14,6 +14,7 @@ import {
   PersonStanding,
   Share2,
   Star,
+  Ban,
   X,
 } from "lucide-react";
 
@@ -37,6 +38,9 @@ interface EventDrawerProps {
   onToggleSaved: () => void;
   onShare: () => void;
   onDirections: () => void;
+  isRejected?: boolean;
+  onReject: () => void;
+  onRestore?: () => void;
 }
 
 /**
@@ -115,6 +119,9 @@ function DrawerCard({
   onToggleSaved,
   onShare,
   onDirections,
+  isRejected,
+  onReject,
+  onRestore,
 }: EventDrawerProps) {
   const palette = MARKER_PALETTE[event.markerColor];
   const goingCount = event.goingCount + (isGoing ? 1 : 0);
@@ -303,6 +310,25 @@ function DrawerCard({
           <Navigation size={17} strokeWidth={2.2} aria-hidden className="fill-brand" />
           Directions
         </motion.button>
+
+        {isRejected ? (
+          <button
+            type="button"
+            onClick={onRestore}
+            className="mt-[9px] flex h-[40px] w-full items-center justify-center text-[14px] font-semibold text-muted transition-colors duration-150 hover:text-ink"
+          >
+            Show on map again
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={onReject}
+            className="mt-[9px] flex h-[40px] w-full items-center justify-center gap-2 text-[14px] font-semibold text-muted transition-colors duration-150 hover:text-coral-text"
+          >
+            <Ban size={15} strokeWidth={2.3} aria-hidden />
+            Reject event
+          </button>
+        )}
 
         <div className="mt-[18px] flex items-start gap-[11px]">
           <CalendarDays
