@@ -267,7 +267,40 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
             onCategoryChange={state.setCategoryFilter}
           />
           )}
-          <CampusStats />
+          <CampusStats
+            events={state.events}
+            goingCount={state.events.reduce((total, event) => total + event.goingCount, 0) + state.going.size}
+            active={
+              state.mapPill === "freeFood" || state.sidebarFilter === "Free Food"
+                ? "freeFood"
+                : state.dateFilter === "any" && state.sidebarFilter === "all"
+                  ? "active"
+                  : state.dateFilter === "today" && state.sidebarFilter === "all"
+                    ? "happening"
+                    : null
+            }
+            onSelect={(id) => {
+              if (id === "freeFood") {
+                state.setSidebarFilter("Free Food");
+                state.setMapPill("freeFood");
+                state.setCategoryFilter("Free Food");
+                state.setDateFilter("any");
+                return;
+              }
+              if (id === "active") {
+                state.setSidebarFilter("all");
+                state.setMapPill("trending");
+                state.setCategoryFilter("all");
+                state.setDateFilter("any");
+                void locateUser({ quiet: true });
+                return;
+              }
+              state.setSidebarFilter("all");
+              state.setMapPill("trending");
+              state.setCategoryFilter("all");
+              state.setDateFilter("today");
+            }}
+          />
           <MapEmptyState
             visible={state.events.length > 0 && state.visibleEvents.length === 0}
             message={

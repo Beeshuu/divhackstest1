@@ -398,4 +398,5 @@ server.on('upgrade', (request, socket, head) => {
     socket.pipe(upstream);
   });
   upstream.on('error', () => socket.destroy());
+  socket.on('error', () => upstream.destroy());
 });
