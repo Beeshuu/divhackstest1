@@ -41,7 +41,7 @@ import { useEventHistory } from "@/lib/use-event-history";
 import { dateTodayAt } from "@/lib/utils";
 import { useGeolocation, type GeoStatus } from "@/lib/use-geolocation";
 import { useMediaQuery } from "@/lib/use-media-query";
-import type { CampusEvent, EventDraft, MapPill } from "@/types/event";
+import type { CampusEvent, EventDraft } from "@/types/event";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -249,10 +249,6 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
     if (!located) mapRef.current?.reset();
   };
 
-  const handlePill = (pill: MapPill) => {
-    state.setMapPill(pill);
-  };
-
   return (
     <div className="flex h-screen min-h-screen flex-col overflow-hidden bg-canvas">
       <TopNavbar
@@ -296,7 +292,8 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
               (filter === "tbd" ||
                 filter === "remote" ||
                 filter === "userLed" ||
-                filter === "saved") &&
+                filter === "saved" ||
+                filter === "trending") &&
               state.sidebarFilter === filter;
             const next = closingPanel ? "all" : filter;
             state.setSidebarFilter(next);
@@ -374,8 +371,6 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
           />
           {composer !== "picking" && (
           <MapFilters
-            activePill={state.mapPill}
-            onPillClick={handlePill}
             dateFilter={state.dateFilter}
             onDateChange={state.setDateFilter}
             categoryFilter={state.categoryFilter}
@@ -419,7 +414,8 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
           {(state.sidebarFilter === "tbd" ||
             state.sidebarFilter === "remote" ||
             state.sidebarFilter === "userLed" ||
-            state.sidebarFilter === "saved") && (
+            state.sidebarFilter === "saved" ||
+            state.sidebarFilter === "trending") && (
             <LocationEventsList
               filter={state.sidebarFilter}
               events={state.visibleEvents}
@@ -458,6 +454,7 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
               state.sidebarFilter !== "remote" &&
               state.sidebarFilter !== "userLed" &&
               state.sidebarFilter !== "saved" &&
+              state.sidebarFilter !== "trending" &&
               state.events.length > 0 &&
               state.visibleEvents.length === 0
             }

@@ -15,6 +15,8 @@ App guide (use this when they ask how something works):
   (University Life at Columbia). Drawer descriptions are 2–3 sentence
   summaries of those listings.
 - Happening Now is today's mapped campus events.
+- Trending sits under Happening Now in the sidebar and opens the 5 most-attended
+  upcoming campus events. Close it with the X, Escape, or by tapping Trending again.
 - Sidebar TBD locations, Remote, Saved, and User Led Events open a list.
   Close it with the X on the popup, Escape, or by tapping the same item again.
 - User Led Events (button above Post Event) shows student-posted listings
