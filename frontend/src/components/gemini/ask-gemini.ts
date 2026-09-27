@@ -199,7 +199,7 @@ export function answerCampusQuestion(
 
   if (includesAny(query, ["tbd", "no location", "location missing", "without a location"])) {
     return {
-      text: `TBD locations is in the sidebar Location list — tap it again to close. ${tbd.length ? `There ${tbd.length === 1 ? "is" : "are"} ${tbd.length} right now:\n${listEvents(tbd)}` : "University Life has no TBD listings right now."}`,
+      text: `TBD locations is in the sidebar Location list — tap it again to close. ${tbd.length ? `There ${tbd.length === 1 ? "is" : "are"} ${tbd.length} right now:\n${listEvents(tbd)}` : "The official campus calendar has no TBD listings right now."}`,
       matches: tbd,
     };
   }
@@ -218,9 +218,9 @@ export function answerCampusQuestion(
     };
   }
 
-  if (includesAny(query, ["university life", "official", "columbia calendar"])) {
+  if (includesAny(query, ["university life", "official", "columbia calendar", "campus calendar"])) {
     const official = events.filter((event) => event.source === "university-life");
-    return found("University Life events", official);
+    return found("official campus events", official);
   }
 
   if (includesAny(query, ["search", "find a hidden", "find rejected"])) {

@@ -228,6 +228,7 @@ function toCampusEvent({ id, title, description, location, start, end, url, host
     locationKind: place.kind,
     sourceUrl: url || ULIFE_PAGE,
     source: "university-life",
+    campusId: "columbia",
   };
 }
 

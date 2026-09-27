@@ -6,6 +6,7 @@ import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { loadOfficialEvents } from './official-events.js';
 import { loadUniversityLifeEvents } from './university-life.js';
 import {
   getSpectrumApp,
@@ -723,6 +724,14 @@ app.get('/api/university-life/events', async (_request, response) => {
     response.json(await loadUniversityLifeEvents());
   } catch (error) {
     response.status(502).json({ error: 'Could not refresh University Life events.', detail: String(error.message ?? error) });
+  }
+});
+
+app.get('/api/official-events', async (request, response) => {
+  try {
+    response.json(await loadOfficialEvents(request.query.campus));
+  } catch (error) {
+    response.status(502).json({ error: 'Could not refresh official campus events.', detail: String(error.message ?? error) });
   }
 });
 

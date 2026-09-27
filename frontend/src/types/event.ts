@@ -65,7 +65,7 @@ export interface CampusEvent {
    * have no public URL until server persistence exists.
    */
   isTemporary?: boolean;
-  /** Live University Life listings: mapped campus pin, TBD, or remote. */
+  /** Live official-calendar listings: mapped campus pin, TBD, or remote. */
   locationKind?: "mapped" | "tbd" | "remote";
   sourceUrl?: string;
   source?: "university-life" | "user";

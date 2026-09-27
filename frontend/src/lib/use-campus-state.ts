@@ -119,8 +119,8 @@ export function useCampusState(
 
   const refreshLiveEvents = useCallback(async () => {
     try {
-      const response = await fetch("/api/university-life/events");
-      if (!response.ok) throw new Error("Could not refresh University Life events.");
+      const response = await fetch(`/api/official-events?campus=${encodeURIComponent(campusId)}`);
+      if (!response.ok) throw new Error("Could not refresh official campus events.");
       const body = await response.json();
       setLiveEvents(Array.isArray(body.events) ? body.events : []);
       setLiveStatus("ready");
@@ -141,7 +141,7 @@ export function useCampusState(
     } catch {
       // Seeded student events still fill User Led Events if the API is down.
     }
-  }, [userId]);
+  }, [campusId, userId]);
 
   useEffect(() => {
     void refreshLiveEvents();
@@ -162,8 +162,12 @@ export function useCampusState(
         if (rejected.has(event.id)) return searching && matchesQuery(event, query);
         if (!matchesQuery(event, query)) return false;
         if (sidebarFilter === "saved") return saved.has(event.id);
-        if (sidebarFilter === "tbd") return event.locationKind === "tbd";
-        if (sidebarFilter === "remote") return event.locationKind === "remote";
+        if (sidebarFilter === "tbd") {
+          return event.locationKind === "tbd" && sharesCampusMap(eventCampusId(event), campusId);
+        }
+        if (sidebarFilter === "remote") {
+          return event.locationKind === "remote" && sharesCampusMap(eventCampusId(event), campusId);
+        }
         if (sidebarFilter === "userLed") return isUserLedEvent(event, userName);
         if (event.locationKind === "tbd" || event.locationKind === "remote") return false;
         if (!sharesCampusMap(eventCampusId(event), campusId)) return false;
@@ -329,8 +333,18 @@ export function useCampusState(
     showToast,
     dismissToast: () => setToast(null),
     liveStatus,
-    tbdCount: events.filter((event) => event.locationKind === "tbd" && !rejected.has(event.id)).length,
-    remoteCount: events.filter((event) => event.locationKind === "remote" && !rejected.has(event.id)).length,
+    tbdCount: events.filter(
+      (event) =>
+        event.locationKind === "tbd" &&
+        !rejected.has(event.id) &&
+        sharesCampusMap(eventCampusId(event), campusId),
+    ).length,
+    remoteCount: events.filter(
+      (event) =>
+        event.locationKind === "remote" &&
+        !rejected.has(event.id) &&
+        sharesCampusMap(eventCampusId(event), campusId),
+    ).length,
     userLedCount: events.filter((event) => isUserLedEvent(event, userName) && !rejected.has(event.id)).length,
     refreshLiveEvents,
   };
