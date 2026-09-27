@@ -3,13 +3,15 @@
 import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronDown, Crown, LogOut, Menu, Search, X } from "lucide-react";
+import { ChevronDown, Crown, LogOut, Menu, Search, Settings, UserRound, X } from "lucide-react";
 
 import { GeminiSparkle } from "@/components/gemini/GeminiSparkle";
 import { CategoryGlyph } from "@/components/icons/CategoryIcons";
 import { NotificationMenu, type NotificationAction } from "@/components/layout/NotificationMenu";
 import { useAuth } from "@/lib/auth";
+import { initialsOf } from "@/lib/utils";
 import type { CampusEvent } from "@/types/event";
+import type { AccountView } from "@/components/account/AccountPanel";
 
 interface SearchProps {
   query: string;
@@ -24,6 +26,7 @@ interface TopNavbarProps extends SearchProps {
   onAskGemini: () => void;
   events: CampusEvent[];
   onNotificationAction: (action: NotificationAction) => void;
+  onOpenAccount: (view: AccountView) => void;
 }
 
 /**
@@ -35,6 +38,7 @@ export function TopNavbar({
   onAskGemini,
   events,
   onNotificationAction,
+  onOpenAccount,
   ...search
 }: TopNavbarProps) {
   return (
@@ -75,6 +79,7 @@ export function TopNavbar({
         events={events}
         onSelectEvent={search.onSelectResult}
         onNotificationAction={onNotificationAction}
+        onOpenAccount={onOpenAccount}
       />
     </header>
   );
@@ -200,11 +205,13 @@ function AccountCluster({
   events,
   onSelectEvent,
   onNotificationAction,
+  onOpenAccount,
 }: {
   onAskGemini: () => void;
   events: CampusEvent[];
   onSelectEvent: (event: CampusEvent) => void;
   onNotificationAction: (action: NotificationAction) => void;
+  onOpenAccount: (view: AccountView) => void;
 }) {
   return (
     <div className="flex shrink-0 items-center gap-2 pr-4 tablet:gap-3.5 tablet:pr-[25px]">
@@ -225,18 +232,12 @@ function AccountCluster({
 
       <span aria-hidden className="hidden h-[26px] w-px bg-line-strong tablet:block" />
 
-      <AccountMenu />
+      <AccountMenu onOpenAccount={onOpenAccount} />
     </div>
   );
 }
 
-/** Initials stand in for a profile photo until uploads exist. */
-function initialsOf(name: string): string {
-  const parts = name.trim().split(/\s+/).slice(0, 2);
-  return parts.map((part) => part[0]?.toUpperCase() ?? "").join("") || "?";
-}
-
-function AccountMenu() {
+function AccountMenu({ onOpenAccount }: { onOpenAccount: (view: AccountView) => void }) {
   const { user, signOut } = useAuth();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -302,8 +303,32 @@ function AccountMenu() {
             <button
               type="button"
               role="menuitem"
-              onClick={handleSignOut}
+              onClick={() => {
+                setOpen(false);
+                onOpenAccount("profile");
+              }}
               className="mt-1 flex w-full items-center gap-2.5 rounded-[11px] px-3 py-[9px] text-left text-[14.5px] font-semibold text-ink transition-colors duration-100 hover:bg-brand-tint hover:text-brand"
+            >
+              <UserRound size={17} strokeWidth={2.2} aria-hidden />
+              Profile
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                onOpenAccount("settings");
+              }}
+              className="flex w-full items-center gap-2.5 rounded-[11px] px-3 py-[9px] text-left text-[14.5px] font-semibold text-ink transition-colors duration-100 hover:bg-brand-tint hover:text-brand"
+            >
+              <Settings size={17} strokeWidth={2.2} aria-hidden />
+              Settings
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={handleSignOut}
+              className="flex w-full items-center gap-2.5 rounded-[11px] px-3 py-[9px] text-left text-[14.5px] font-semibold text-ink transition-colors duration-100 hover:bg-brand-tint hover:text-brand"
             >
               <LogOut size={17} strokeWidth={2.2} aria-hidden />
               Sign out

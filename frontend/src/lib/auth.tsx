@@ -18,6 +18,15 @@ export interface AuthUser {
   email: string | null;
   phone: string;
   college: string;
+  profilePrivate: boolean;
+}
+
+export interface ProfileUpdate {
+  name?: string;
+  email?: string | null;
+  phone?: string;
+  college?: string;
+  profilePrivate?: boolean;
 }
 
 export interface SignUpInput {
@@ -36,6 +45,8 @@ interface AuthValue {
   signUp: (input: SignUpInput) => Promise<void>;
   signIn: (identifier: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  updateProfile: (input: ProfileUpdate) => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   /** fetch() with the session token attached, for the events API. */
   authFetch: (path: string, init?: RequestInit) => Promise<Response>;
 }
@@ -51,6 +62,18 @@ function readToken(): string | null {
 async function errorFrom(response: Response, fallback: string): Promise<Error> {
   const body = await response.json().catch(() => null);
   return new Error(typeof body?.error === "string" ? body.error : fallback);
+}
+
+function asUser(value: unknown): AuthUser {
+  const row = value as Partial<AuthUser> & { profile_private?: unknown };
+  return {
+    id: Number(row.id),
+    name: String(row.name ?? ""),
+    email: typeof row.email === "string" ? row.email : null,
+    phone: String(row.phone ?? ""),
+    college: String(row.college ?? ""),
+    profilePrivate: Boolean(row.profilePrivate ?? row.profile_private),
+  };
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -69,7 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!response.ok) throw new Error("Session expired.");
         const body = await response.json();
         if (!active) return;
-        setUser(body.user);
+        setUser(asUser(body.user));
         setStatus("authenticated");
       })
       .catch(() => {
@@ -84,7 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const adopt = useCallback((token: string, nextUser: AuthUser) => {
     window.localStorage.setItem(TOKEN_KEY, token);
-    setUser(nextUser);
+    setUser(asUser(nextUser));
     setStatus("authenticated");
   }, []);
 
@@ -128,6 +151,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }).catch(() => undefined);
   }, []);
 
+  const updateProfile = useCallback(async (input: ProfileUpdate) => {
+    const token = readToken();
+    if (!token) throw new Error("Sign in to continue.");
+    const response = await fetch("/api/auth/me", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(input),
+    });
+    if (!response.ok) throw await errorFrom(response, "Could not update your account.");
+    const body = await response.json();
+    setUser(asUser(body.user));
+  }, []);
+
+  const changePassword = useCallback(async (currentPassword: string, newPassword: string) => {
+    const token = readToken();
+    if (!token) throw new Error("Sign in to continue.");
+    const response = await fetch("/api/auth/password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+    if (!response.ok) throw await errorFrom(response, "Could not change your password.");
+  }, []);
+
   const authFetch = useCallback((path: string, init: RequestInit = {}) => {
     const token = readToken();
     return fetch(path, {
@@ -140,8 +187,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, status, signUp, signIn, signOut, authFetch }),
-    [user, status, signUp, signIn, signOut, authFetch],
+    () => ({ user, status, signUp, signIn, signOut, updateProfile, changePassword, authFetch }),
+    [user, status, signUp, signIn, signOut, updateProfile, changePassword, authFetch],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
