@@ -26,8 +26,8 @@ const COPY: Partial<Record<SidebarFilter, { title: string; empty: string; source
   },
   remote: {
     title: "Remote events",
-    empty: "The official campus calendar has no remote or online events right now.",
-    source: "From the official campus calendar",
+    empty: "No remote or virtual events right now — official or student-posted.",
+    source: "Official calendar and student-posted virtual events",
   },
   userLed: {
     title: "User Led Events",

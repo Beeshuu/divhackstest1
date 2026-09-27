@@ -17,6 +17,7 @@ interface ApiEventRow {
   closes_at: string;
   joined_count?: number;
   created_by?: number;
+  location_kind?: string;
   images?: Array<{ id?: number; url: string; isPrimary?: boolean }>;
 }
 
@@ -35,6 +36,7 @@ export function communityEventFromApi(row: ApiEventRow, myUserId?: number): Camp
   const point = geoToCampusMap(latlng, campusId);
   const category = row.category as EventCategory;
   const style = CATEGORY_STYLE[category];
+  const remote = row.location_kind === "remote";
   const images = Array.isArray(row.images)
     ? row.images.filter((image) => typeof image?.url === "string" && image.url.length > 0)
     : [];
@@ -42,15 +44,15 @@ export function communityEventFromApi(row: ApiEventRow, myUserId?: number): Camp
     id: `user-${row.id}`,
     title: row.title,
     category,
-    locationName: row.location_name || "Pinned location",
-    address: row.address || row.location_name || "Pinned on the campus map",
+    locationName: row.location_name || (remote ? "Virtual" : "Pinned location"),
+    address: row.address || row.location_name || (remote ? "Online event" : "Pinned on the campus map"),
     description: row.description || "Posted by a student on Campus Connect.",
     mapX: point.x,
     mapY: point.y,
     campusId,
     latitude: row.latitude,
     longitude: row.longitude,
-    distance: "On campus",
+    distance: remote ? "Remote" : "On campus",
     timeStatus: timeStatusFromDates(start, end),
     startTime: clockLabel(start),
     endTime: clockLabel(end),
@@ -62,7 +64,7 @@ export function communityEventFromApi(row: ApiEventRow, myUserId?: number): Camp
     host: row.host || "Campus student",
     markerColor: style.markerColor,
     iconType: style.iconType,
-    locationKind: "mapped",
+    locationKind: remote ? "remote" : "mapped",
     source: "user",
     hostedByMe: myUserId != null && row.created_by === myUserId,
     images,

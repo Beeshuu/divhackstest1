@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, Info, MapPin, X } from "lucide-react";
+import { Check, Info, MapPin, Monitor, X } from "lucide-react";
 
 import { CategoryGlyph } from "@/components/icons/CategoryIcons";
 import { EventPhotoPicker } from "@/components/events/EventPhotoPicker";
@@ -30,7 +30,7 @@ const LABEL = "mb-[7px] block text-[13px] font-bold text-ink-soft";
 function validate(draft: EventDraft): Partial<Record<Field, string>> {
   const errors: Partial<Record<Field, string>> = {};
   if (!draft.title.trim()) errors.title = "Give your event a title.";
-  if (!draft.point) errors.point = "Choose where it's happening on the map.";
+  if (draft.locationKind !== "remote" && !draft.point) errors.point = "Choose where it's happening on the map.";
   if (!isTimeRangeValid(draft.startTime, draft.endTime)) errors.time = "End time must be after the start time.";
   return errors;
 }
@@ -180,33 +180,77 @@ export function CreateEventModal({
               </fieldset>
 
               <div>
-                <label htmlFor="ev-location" className={LABEL}>
-                  Location
-                </label>
+                <p className={LABEL}>Location</p>
+                <div className="mb-2 grid grid-cols-2 gap-2">
+                  {(
+                    [
+                      { id: "mapped" as const, label: "On campus", icon: MapPin },
+                      { id: "remote" as const, label: "Virtual", icon: Monitor },
+                    ] as const
+                  ).map((option) => {
+                    const selected = (draft.locationKind ?? "mapped") === option.id;
+                    const Icon = option.icon;
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() =>
+                          onChange({
+                            ...draft,
+                            locationKind: option.id,
+                            point: option.id === "remote" ? null : draft.point,
+                          })
+                        }
+                        className={cn(
+                          "flex h-10 items-center justify-center gap-2 rounded-[11px] border text-[13.5px] font-semibold transition-colors duration-150",
+                          selected
+                            ? "border-brand/30 bg-brand-tint text-brand"
+                            : "border-line bg-panel text-ink-soft hover:bg-[#f5f7fb]",
+                        )}
+                      >
+                        <Icon size={15} strokeWidth={2.3} aria-hidden />
+                        {option.label}
+                      </button>
+                    );
+                  })}
+                </div>
                 <div className="flex flex-col gap-2 tablet:flex-row">
                   <input
                     id="ev-location"
                     value={draft.locationName}
                     onChange={(e) => set("locationName", e.target.value)}
-                    placeholder="Building or spot, e.g. Low Steps"
-                    maxLength={60}
+                    placeholder={
+                      draft.locationKind === "remote"
+                        ? "Zoom, Meet link, or Virtual"
+                        : "Building or spot, e.g. Low Steps"
+                    }
+                    maxLength={80}
                     className={cn(INPUT, "h-11 min-w-0 tablet:flex-1")}
                   />
-                  <button
-                    type="button"
-                    onClick={onChooseOnMap}
-                    className={cn(
-                      "flex h-11 shrink-0 items-center justify-center gap-2 rounded-[12px] px-4 text-[14px] font-bold transition-colors duration-150",
-                      draft.point
-                        ? "bg-[#DFF3E6] text-[#1F914A] hover:bg-[#d2eedc]"
-                        : "bg-brand-soft text-brand hover:bg-[#dde8fa]",
-                    )}
-                  >
-                    {draft.point ? <Check size={16} strokeWidth={2.8} /> : <MapPin size={16} strokeWidth={2.4} />}
-                    {draft.point ? "Pinned · Change" : "Choose on map"}
-                  </button>
+                  {draft.locationKind !== "remote" && (
+                    <button
+                      type="button"
+                      onClick={onChooseOnMap}
+                      className={cn(
+                        "flex h-11 shrink-0 items-center justify-center gap-2 rounded-[12px] px-4 text-[14px] font-bold transition-colors duration-150",
+                        draft.point
+                          ? "bg-[#DFF3E6] text-[#1F914A] hover:bg-[#d2eedc]"
+                          : "bg-brand-soft text-brand hover:bg-[#dde8fa]",
+                      )}
+                    >
+                      {draft.point ? <Check size={16} strokeWidth={2.8} /> : <MapPin size={16} strokeWidth={2.4} />}
+                      {draft.point ? "Pinned · Change" : "Choose on map"}
+                    </button>
+                  )}
                 </div>
-                {error("point")}
+                {draft.locationKind === "remote" ? (
+                  <p className="mt-[6px] text-[12.5px] font-medium text-muted">
+                    Virtual listings skip the map pin and show under Remote and User Led Events.
+                  </p>
+                ) : (
+                  error("point")
+                )}
               </div>
 
               <div>

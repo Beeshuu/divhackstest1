@@ -299,6 +299,7 @@ function DrawerCard({
           {isGoing ? "You're Going" : "I'm Going"}
         </motion.button>
 
+        {event.locationKind !== "remote" && event.locationKind !== "tbd" && (
         <motion.button
           type="button"
           onClick={onDirections}
@@ -310,6 +311,7 @@ function DrawerCard({
           <Navigation size={17} strokeWidth={2.2} aria-hidden className="fill-brand" />
           Directions
         </motion.button>
+        )}
 
         {isRejected ? (
           <button
