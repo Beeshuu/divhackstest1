@@ -13,7 +13,6 @@ import {
   Navigation,
   PersonStanding,
   Share2,
-  Star,
   Ban,
   X,
 } from "lucide-react";
@@ -268,41 +267,18 @@ function DrawerCard({
           </div>
         )}
 
-        <div className="mt-[16px] flex items-start">
-          <div className="min-w-0 flex-1 pr-3">
-            <div className="flex items-center gap-[9px]">
-              <PeopleIcon size={20} aria-hidden className="shrink-0 text-brand" />
-              <span className="truncate text-[15px] font-bold leading-[1.15] text-ink">
-                {formatCount(goingCount)} going
-              </span>
-            </div>
-            <AvatarStack
-              className="mt-[8px]"
-              people={isGoing ? ["You", "AR", "MK"] : ["AR", "MK", "JT"]}
-              count={goingCount}
-            />
+        <div className="mt-[16px]">
+          <div className="flex items-center gap-[9px]">
+            <PeopleIcon size={20} aria-hidden className="shrink-0 text-brand" />
+            <span className="truncate text-[15px] font-bold leading-[1.15] text-ink">
+              {formatCount(goingCount)} going
+            </span>
           </div>
-
-          <span aria-hidden className="mt-[2px] w-px self-stretch bg-line" />
-
-          <div className="min-w-0 flex-1 pl-4">
-            <div className="flex items-center gap-[9px]">
-              <Star
-                size={19}
-                strokeWidth={2}
-                aria-hidden
-                className="shrink-0 fill-[#FBB234] text-[#FBB234]"
-              />
-              <span className="truncate text-[15px] font-bold leading-[1.15] text-ink">
-                {formatCount(event.interestedCount)} interested
-              </span>
-            </div>
-            <AvatarStack
-              className="mt-[8px]"
-              people={["SL", "DP", "NV"]}
-              count={event.interestedCount}
-            />
-          </div>
+          <AvatarStack
+            className="mt-[8px]"
+            people={isGoing ? ["You", "AR", "MK"] : ["AR", "MK", "JT"]}
+            count={goingCount}
+          />
         </div>
 
         <motion.button
