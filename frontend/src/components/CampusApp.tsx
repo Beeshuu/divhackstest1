@@ -178,7 +178,6 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
   const openEvent = (event: CampusEvent) => {
     state.selectEvent(event.id);
     mapRef.current?.centerOn({ x: event.mapX, y: event.mapY });
-    setDirectionsEvent(event);
   };
 
   const handleLocateButton = async () => {
