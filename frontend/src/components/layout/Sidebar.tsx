@@ -2,7 +2,7 @@
 
 import type { ComponentType } from "react";
 import { motion } from "framer-motion";
-import { MapPinOff, Monitor, Plus, Users, X } from "lucide-react";
+import { MapPinOff, Monitor, Plus, TrendingUp, Users, X } from "lucide-react";
 
 import { GeminiSparkle } from "@/components/gemini/GeminiSparkle";
 import { BookmarkIcon, HouseIcon } from "@/components/icons/CategoryIcons";
@@ -25,6 +25,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { label: "Happening Now", filter: "all", icon: HouseIcon, iconClass: "text-brand" },
+  { label: "Trending", filter: "trending", icon: TrendingUp, iconClass: "text-[#3B4A66]" },
   { label: "Saved", filter: "saved", icon: BookmarkIcon, iconClass: "text-[#3B4A66]" },
 ];
 
@@ -81,7 +82,7 @@ export function Sidebar({
               key={item.label}
               type="button"
               aria-current={item.filter === "all" && selected ? "page" : undefined}
-              aria-pressed={item.filter === "saved" ? selected : undefined}
+              aria-pressed={item.filter === "saved" || item.filter === "trending" ? selected : undefined}
               onClick={() => onSelect(item.filter)}
               className={cn(
                 "flex h-[49px] items-center gap-[18px] rounded-[13px] px-[18px] text-left text-[15.5px] transition-colors duration-150 ease-out",

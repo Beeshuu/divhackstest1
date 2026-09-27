@@ -88,7 +88,7 @@ export interface EventImage {
 }
 
 /** Sidebar selection: a category, every event, or the user's saved events. */
-export type SidebarFilter = "all" | "saved" | "tbd" | "remote" | "userLed";
+export type SidebarFilter = "all" | "trending" | "saved" | "tbd" | "remote" | "userLed";
 
 /** Single-select view pills floating over the map. */
 export type MapPill = "trending";

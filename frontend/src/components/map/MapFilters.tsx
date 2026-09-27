@@ -2,11 +2,11 @@
 
 import { useEffect, useRef, useState, type ComponentType } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { CalendarDays, Check, ChevronDown, Grid2x2, TrendingUp } from "lucide-react";
+import { CalendarDays, Check, ChevronDown, Grid2x2 } from "lucide-react";
 
 import { EVENT_CATEGORIES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
-import type { DateFilter, EventCategory, MapPill } from "@/types/event";
+import type { DateFilter, EventCategory } from "@/types/event";
 
 type IconComponent = ComponentType<{
   size?: number;
@@ -15,17 +15,11 @@ type IconComponent = ComponentType<{
 }>;
 
 interface MapFiltersProps {
-  activePill: MapPill;
-  onPillClick: (pill: MapPill) => void;
   dateFilter: DateFilter;
   onDateChange: (value: DateFilter) => void;
   categoryFilter: EventCategory | "all";
   onCategoryChange: (value: EventCategory | "all") => void;
 }
-
-const PILLS: Array<{ id: MapPill; label: string; icon: IconComponent }> = [
-  { id: "trending", label: "Trending", icon: TrendingUp },
-];
 
 const PILL_BASE =
   "flex h-[42px] shrink-0 items-center gap-[7px] rounded-full px-[13px] text-[14px] font-semibold transition-shadow duration-150";
@@ -35,8 +29,6 @@ const PILL_IDLE = "border border-line bg-panel text-ink-soft shadow-pill hover:s
 
 /** Floating filter row over the top of the map. */
 export function MapFilters({
-  activePill,
-  onPillClick,
   dateFilter,
   onDateChange,
   categoryFilter,
@@ -49,30 +41,6 @@ export function MapFilters({
       className="pointer-events-none absolute left-0 right-0 top-4 z-10 overflow-x-auto px-[24px] scrollbar-none"
     >
       <div className="pointer-events-auto flex w-max gap-[22px] pb-1">
-        {PILLS.map((pill) => {
-          const active = pill.id === activePill;
-          const Icon = pill.icon;
-          return (
-            <motion.button
-              key={pill.id}
-              type="button"
-              aria-pressed={active}
-              onClick={() => onPillClick(pill.id)}
-              whileHover={{ y: -1 }}
-              whileTap={{ scale: 0.97, y: 0 }}
-              transition={{ duration: 0.15, ease: "easeOut" }}
-              className={cn(PILL_BASE, active ? PILL_ACTIVE : PILL_IDLE)}
-            >
-              <Icon
-                size={16}
-                strokeWidth={2.3}
-                className={active ? "text-white" : "text-brand"}
-              />
-              {pill.label}
-            </motion.button>
-          );
-        })}
-
         <FilterMenu
           icon={CalendarDays}
           label={dateFilter === "today" ? "Today" : "Any day"}

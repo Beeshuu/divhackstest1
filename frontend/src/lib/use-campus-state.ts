@@ -12,6 +12,7 @@ import {
 } from "./utils";
 import { communityEventFromApi } from "./community-events";
 import { campusMapToGeo, eventCampusId, sharesCampusMap, type CampusId } from "./campuses";
+import { pickTrendingEvents } from "./trending-events";
 import { FEATURED_EVENT_ID, MOCK_EVENTS } from "@/data/mock-events";
 import { isUserLedEvent, USER_LED_EVENTS } from "@/data/user-led-events";
 import type {
@@ -164,29 +165,32 @@ export function useCampusState(
 
   const searching = query.trim().length > 0;
 
-  const visibleEvents = useMemo(
-    () =>
-      events.filter((event) => {
-        if (rejected.has(event.id)) return searching && matchesQuery(event, query);
-        if (!matchesQuery(event, query)) return false;
-        if (sidebarFilter === "saved") return saved.has(event.id);
-        if (sidebarFilter === "tbd") {
-          return event.locationKind === "tbd" && sharesCampusMap(eventCampusId(event), campusId);
-        }
-        if (sidebarFilter === "remote") {
-          return event.locationKind === "remote" && sharesCampusMap(eventCampusId(event), campusId);
-        }
-        if (sidebarFilter === "userLed") {
-          return isUserLedEvent(event, userName) && sharesCampusMap(eventCampusId(event), campusId);
-        }
-        if (event.locationKind === "tbd" || event.locationKind === "remote") return false;
-        if (!sharesCampusMap(eventCampusId(event), campusId)) return false;
-        if (categoryFilter !== "all" && event.category !== categoryFilter) return false;
-        if (dateFilter === "today" && !isEventToday(event)) return false;
-        return true;
-      }),
-    [events, query, searching, rejected, sidebarFilter, saved, categoryFilter, dateFilter, userName, campusId],
-  );
+  const visibleEvents = useMemo(() => {
+    if (sidebarFilter === "trending") {
+      const trending = pickTrendingEvents(events, { campusId, rejected, going });
+      if (!searching) return trending;
+      return trending.filter((event) => matchesQuery(event, query));
+    }
+    return events.filter((event) => {
+      if (rejected.has(event.id)) return searching && matchesQuery(event, query);
+      if (!matchesQuery(event, query)) return false;
+      if (sidebarFilter === "saved") return saved.has(event.id);
+      if (sidebarFilter === "tbd") {
+        return event.locationKind === "tbd" && sharesCampusMap(eventCampusId(event), campusId);
+      }
+      if (sidebarFilter === "remote") {
+        return event.locationKind === "remote" && sharesCampusMap(eventCampusId(event), campusId);
+      }
+      if (sidebarFilter === "userLed") {
+        return isUserLedEvent(event, userName) && sharesCampusMap(eventCampusId(event), campusId);
+      }
+      if (event.locationKind === "tbd" || event.locationKind === "remote") return false;
+      if (!sharesCampusMap(eventCampusId(event), campusId)) return false;
+      if (categoryFilter !== "all" && event.category !== categoryFilter) return false;
+      if (dateFilter === "today" && !isEventToday(event)) return false;
+      return true;
+    });
+  }, [events, query, searching, rejected, going, sidebarFilter, saved, categoryFilter, dateFilter, userName, campusId]);
 
   const searchResults = useMemo(
     () => events.filter((event) => matchesQuery(event, query)),

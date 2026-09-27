@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { CalendarDays, Check, MapPin, X } from "lucide-react";
+import { CalendarDays, Check, MapPin, Users, X } from "lucide-react";
 
 import { CategoryGlyph } from "@/components/icons/CategoryIcons";
 import { cn } from "@/lib/utils";
@@ -38,6 +38,11 @@ const COPY: Partial<Record<SidebarFilter, { title: string; empty: string; source
     title: "Saved",
     empty: "You haven't saved any events yet — use the bookmark on an event.",
     source: "Bookmarked listings, including remote and TBD",
+  },
+  trending: {
+    title: "Trending",
+    empty: "No upcoming campus events have enough people going yet.",
+    source: "The 5 most-attended events coming up soon",
   },
 };
 
@@ -129,6 +134,14 @@ export function LocationEventsList({
                         {event.dateLabel} · {event.startTime}–{event.endTime}
                       </span>
                     </span>
+                    {filter === "trending" && (
+                      <span className="mt-[2px] flex items-center gap-1.5 text-[12.5px] font-medium text-brand">
+                        <Users size={12} strokeWidth={2.3} aria-hidden />
+                        <span>
+                          {event.goingCount + (goingIds?.has(event.id) ? 1 : 0)} going
+                        </span>
+                      </span>
+                    )}
                   </span>
                 </button>
                 {showActions && (

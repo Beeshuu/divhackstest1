@@ -1,3 +1,4 @@
+import { pickTrendingEvents } from "@/lib/trending-events";
 import { isEventToday } from "@/lib/utils";
 import type { CampusEvent, EventCategory } from "@/types/event";
 
@@ -117,6 +118,7 @@ export function answerCampusQuestion(
   const remote = events.filter((event) => event.locationKind === "remote");
   const tbd = events.filter((event) => event.locationKind === "tbd");
   const today = events.filter((event) => isEventToday(event) && event.locationKind !== "tbd" && event.locationKind !== "remote");
+  const trending = pickTrendingEvents(events);
 
   if (!query) {
     return {
@@ -208,6 +210,13 @@ export function answerCampusQuestion(
     return {
       text: `Remote in the sidebar lists online events. Close the popup with the X, Escape, or by tapping Remote again. ${remote.length ? `There ${remote.length === 1 ? "is" : "are"} ${remote.length} right now:\n${listEvents(remote)}` : "No remote events are listed right now."}`,
       matches: remote,
+    };
+  }
+
+  if (includesAny(query, ["trending", "most popular", "most attended", "most populated", "popular events"])) {
+    return {
+      text: `Trending is under Happening Now in the sidebar. It opens the 5 most-attended events coming up soon. Close the list with the X, Escape, or by tapping Trending again. ${trending.length ? `Right now:\n${listEvents(trending)}` : "Nothing upcoming has enough people going yet."}`,
+      matches: trending,
     };
   }
 
