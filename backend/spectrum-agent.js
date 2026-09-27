@@ -166,6 +166,29 @@ export async function sendSpectrumCode(phone, code, purpose, name) {
   }
 }
 
+export async function sendSpectrumNotice(phone, name, title, body) {
+  const app = await getSpectrumApp();
+  if (!app) return { delivered: false };
+
+  await ensurePhotonUser(phone, name).catch((error) => {
+    console.error('Photon user ensure failed:', error.message);
+    return null;
+  });
+
+  try {
+    const { imessage } = await import('spectrum-ts/providers/imessage');
+    const im = imessage(app);
+    const user = await im.user(toE164(phone));
+    const space = await im.space.create(user);
+    const first = name ? `${String(name).split(' ')[0]}` : 'there';
+    await space.send(`${first} — ${title}\n${body}`);
+    return { delivered: true };
+  } catch (error) {
+    console.error('Photon notice failed:', error.message);
+    return { delivered: false, sendError: error.message };
+  }
+}
+
 export async function sendSpectrumWelcome(phone, name) {
   const app = await getSpectrumApp();
   if (!app) return false;
