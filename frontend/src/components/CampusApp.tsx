@@ -292,7 +292,9 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
             events={
               state.sidebarFilter === "tbd" || state.sidebarFilter === "remote"
                 ? []
-                : state.visibleEvents
+                : state.visibleEvents.filter(
+                    (event) => event.locationKind !== "tbd" && event.locationKind !== "remote",
+                  )
             }
             selectedEventId={state.drawerOpen && state.selectedEvent ? state.selectedEvent.id : null}
             onSelectEvent={(id) => {
@@ -369,7 +371,8 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
           />
           {(state.sidebarFilter === "tbd" ||
             state.sidebarFilter === "remote" ||
-            state.sidebarFilter === "userLed") && (
+            state.sidebarFilter === "userLed" ||
+            state.sidebarFilter === "saved") && (
             <LocationEventsList
               filter={state.sidebarFilter}
               events={state.visibleEvents}
@@ -401,6 +404,7 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
               state.sidebarFilter !== "tbd" &&
               state.sidebarFilter !== "remote" &&
               state.sidebarFilter !== "userLed" &&
+              state.sidebarFilter !== "saved" &&
               state.events.length > 0 &&
               state.visibleEvents.length === 0
             }

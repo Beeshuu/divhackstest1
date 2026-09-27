@@ -155,7 +155,7 @@ export function useCampusState(initialEventId?: string, userId?: number, userNam
       events.filter((event) => {
         if (rejected.has(event.id)) return searching && matchesQuery(event, query);
         if (!matchesQuery(event, query)) return false;
-        if (sidebarFilter === "saved" && !saved.has(event.id)) return false;
+        if (sidebarFilter === "saved") return saved.has(event.id);
         if (sidebarFilter === "tbd") return event.locationKind === "tbd";
         if (sidebarFilter === "remote") return event.locationKind === "remote";
         if (sidebarFilter === "userLed") return isUserLedEvent(event, userName);

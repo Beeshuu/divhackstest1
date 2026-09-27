@@ -32,6 +32,11 @@ const COPY: Partial<Record<SidebarFilter, { title: string; empty: string; source
     empty: "No student-posted events right now. Use Post Event to add one.",
     source: "Posted by students on Campus Connect",
   },
+  saved: {
+    title: "Saved",
+    empty: "You haven't saved any events yet — use the bookmark on an event.",
+    source: "Bookmarked listings, including remote and TBD",
+  },
 };
 
 const ACTION =
