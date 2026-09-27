@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ArrowUp, X } from "lucide-react";
 
 import { GeminiSparkle } from "./GeminiSparkle";
-import { answerCampusQuestion } from "./ask-gemini";
+import { answerCampusQuestion, fetchGeminiReply } from "./ask-gemini";
 import { CategoryGlyph } from "@/components/icons/CategoryIcons";
 import { useMediaQuery } from "@/lib/use-media-query";
 import type { CampusEvent } from "@/types/event";
@@ -37,7 +37,7 @@ function seedMessage(): Message {
   };
 }
 
-/** Floating Gemini chat: local answers about events currently on the map. */
+/** Floating Gemini chat: live model when a key is set, local campus answers otherwise. */
 export function AskGeminiPanel({
   open,
   onClose,
@@ -48,6 +48,7 @@ export function AskGeminiPanel({
   const titleId = useId();
   const isSheet = useMediaQuery("(max-width: 899px)");
   const [input, setInput] = useState("");
+  const [pending, setPending] = useState(false);
   const [messages, setMessages] = useState<Message[]>(() => [seedMessage()]);
   const listRef = useRef<HTMLDivElement>(null);
   const fieldRef = useRef<HTMLInputElement>(null);
@@ -67,16 +68,29 @@ export function AskGeminiPanel({
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, open]);
 
-  const ask = (question: string) => {
+  const ask = async (question: string) => {
     const text = question.trim();
-    if (!text) return;
-    const reply = answerCampusQuestion(text, events, selectedEvent);
-    setMessages((current) => [
-      ...current,
-      { id: Date.now(), role: "user", text },
-      { id: Date.now() + 1, role: "assistant", text: reply.text, matches: reply.matches },
-    ]);
+    if (!text || pending) return;
+    const userId = Date.now();
     setInput("");
+    setPending(true);
+    setMessages((current) => [...current, { id: userId, role: "user", text }]);
+
+    try {
+      const reply = await fetchGeminiReply(text, events, selectedEvent);
+      setMessages((current) => [
+        ...current,
+        { id: userId + 1, role: "assistant", text: reply.text, matches: reply.matches },
+      ]);
+    } catch {
+      const reply = answerCampusQuestion(text, events, selectedEvent);
+      setMessages((current) => [
+        ...current,
+        { id: userId + 1, role: "assistant", text: reply.text, matches: reply.matches },
+      ]);
+    } finally {
+      setPending(false);
+    }
   };
 
   return (
@@ -173,13 +187,19 @@ export function AskGeminiPanel({
               </div>
             ))}
 
-            {messages.length === 1 && (
+            {pending && (
+              <div className="max-w-[92%] rounded-[16px] bg-field px-3.5 py-2.5 text-[14px] font-medium text-muted">
+                Thinking…
+              </div>
+            )}
+
+            {messages.length === 1 && !pending && (
               <div className="flex flex-wrap gap-2 pt-1">
                 {SUGGESTIONS.map((suggestion) => (
                   <button
                     key={suggestion}
                     type="button"
-                    onClick={() => ask(suggestion)}
+                    onClick={() => void ask(suggestion)}
                     className="rounded-full border border-line bg-panel px-3 py-[7px] text-[13px] font-semibold text-ink-soft transition-colors hover:border-brand/30 hover:bg-brand-tint hover:text-brand"
                   >
                     {suggestion}
@@ -193,7 +213,7 @@ export function AskGeminiPanel({
             className="flex shrink-0 items-center gap-2 border-t border-line px-3 py-3"
             onSubmit={(e) => {
               e.preventDefault();
-              ask(input);
+              void ask(input);
             }}
           >
             <input
@@ -203,12 +223,13 @@ export function AskGeminiPanel({
               onChange={(e) => setInput(e.target.value)}
               aria-label="Ask Gemini about campus events"
               placeholder="Ask about campus events…"
-              className="h-11 min-w-0 flex-1 rounded-full border border-transparent bg-field px-4 text-[14.5px] font-medium text-ink placeholder:font-normal placeholder:text-faint outline-none transition-colors focus:border-brand/30 focus:bg-white"
+              disabled={pending}
+              className="h-11 min-w-0 flex-1 rounded-full border border-transparent bg-field px-4 text-[14.5px] font-medium text-ink placeholder:font-normal placeholder:text-faint outline-none transition-colors focus:border-brand/30 focus:bg-white disabled:opacity-70"
             />
             <motion.button
               type="submit"
               aria-label="Send question"
-              disabled={!input.trim()}
+              disabled={pending || !input.trim()}
               whileTap={{ scale: 0.94 }}
               className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-white transition-opacity disabled:opacity-40"
               style={{

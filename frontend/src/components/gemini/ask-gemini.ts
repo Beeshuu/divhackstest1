@@ -5,6 +5,43 @@ export interface GeminiReply {
   matches: CampusEvent[];
 }
 
+/** Calls the Next.js /gemini route. Throws when the live model is unavailable. */
+export async function fetchGeminiReply(
+  message: string,
+  events: CampusEvent[],
+  selectedEvent: CampusEvent | null,
+): Promise<GeminiReply> {
+  const response = await fetch("/gemini", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      message,
+      currentEvents: events,
+      selectedEvent,
+    }),
+  });
+  const data: unknown = await response.json().catch(() => null);
+  if (!response.ok) {
+    const error =
+      data && typeof data === "object" && "error" in data && typeof data.error === "string"
+        ? data.error
+        : "Gemini request failed.";
+    throw new Error(error);
+  }
+  const text =
+    data && typeof data === "object" && "text" in data && typeof data.text === "string" ? data.text : "";
+  const eventIds =
+    data && typeof data === "object" && "eventIds" in data && Array.isArray(data.eventIds)
+      ? data.eventIds.filter((id): id is string => typeof id === "string")
+      : [];
+  const matches = events.filter(
+    (event) =>
+      eventIds.includes(event.id) ||
+      (eventIds.length === 0 && text.toLowerCase().includes(event.title.toLowerCase())),
+  );
+  return { text, matches };
+}
+
 const CATEGORY_HINTS: Array<{ keys: string[]; category: EventCategory }> = [
   { keys: ["free food", "food", "pizza", "eat", "snack", "lunch", "dinner"], category: "Free Food" },
   { keys: ["social", "party", "meetup", "hang"], category: "Social" },
