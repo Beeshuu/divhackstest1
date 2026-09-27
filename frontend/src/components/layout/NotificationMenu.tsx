@@ -17,6 +17,7 @@ interface NotificationMenuProps {
   events: CampusEvent[];
   onSelectEvent: (event: CampusEvent) => void;
   onAction: (action: NotificationAction) => void;
+  photonEnabled?: boolean;
 }
 
 const ICONS: Record<NoticeIcon, ComponentType<{ size?: number; className?: string }>> = {
@@ -43,6 +44,7 @@ export function NotificationMenu({
   events,
   onSelectEvent,
   onAction,
+  photonEnabled,
 }: NotificationMenuProps) {
   const [open, setOpen] = useState(false);
 
@@ -98,7 +100,9 @@ export function NotificationMenu({
           >
             <div className="flex items-center justify-between px-3 py-2.5">
               <p className="text-[14.5px] font-bold text-ink">Notifications</p>
-              <p className="text-[12.5px] font-medium text-muted">Campus alerts</p>
+              <p className="text-[12.5px] font-medium text-muted">
+                {photonEnabled ? "Photon iMessage" : "Campus alerts"}
+              </p>
             </div>
             <div aria-hidden className="mx-2 h-px bg-line" />
             <ul className="max-h-[360px] overflow-y-auto py-1 scrollbar-none">

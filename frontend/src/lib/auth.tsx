@@ -20,6 +20,7 @@ export interface AuthUser {
   college: string;
   profilePrivate: boolean;
   twoFactorEnabled: boolean;
+  photonNotificationsEnabled: boolean;
 }
 
 export interface ProfileUpdate {
@@ -29,6 +30,7 @@ export interface ProfileUpdate {
   college?: string;
   profilePrivate?: boolean;
   twoFactorEnabled?: boolean;
+  photonNotificationsEnabled?: boolean;
 }
 
 export interface SignUpInput {
@@ -105,6 +107,10 @@ function asUser(value: unknown): AuthUser {
       typeof row.twoFactorEnabled === "boolean"
         ? row.twoFactorEnabled
         : row.two_factor_enabled !== 0,
+    photonNotificationsEnabled:
+      typeof row.photonNotificationsEnabled === "boolean"
+        ? row.photonNotificationsEnabled
+        : row.photon_notifications_enabled !== 0,
   };
 }
 

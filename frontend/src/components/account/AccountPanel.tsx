@@ -3,6 +3,7 @@
 import { useEffect, useId, useState, type FormEvent } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  Bell,
   CalendarDays,
   Eye,
   EyeOff,
@@ -300,6 +301,8 @@ function SettingsView() {
   const [privacyError, setPrivacyError] = useState<string | null>(null);
   const [twoFactorPending, setTwoFactorPending] = useState(false);
   const [twoFactorError, setTwoFactorError] = useState<string | null>(null);
+  const [photonNoticePending, setPhotonNoticePending] = useState(false);
+  const [photonNoticeError, setPhotonNoticeError] = useState<string | null>(null);
   const [spectrumConnected, setSpectrumConnected] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -381,6 +384,18 @@ function SettingsView() {
       setTwoFactorError(cause instanceof Error ? cause.message : "Could not update two-step verification.");
     } finally {
       setTwoFactorPending(false);
+    }
+  };
+
+  const togglePhotonNotices = async () => {
+    setPhotonNoticeError(null);
+    setPhotonNoticePending(true);
+    try {
+      await updateProfile({ photonNotificationsEnabled: !user.photonNotificationsEnabled });
+    } catch (cause) {
+      setPhotonNoticeError(cause instanceof Error ? cause.message : "Could not update Photon messages.");
+    } finally {
+      setPhotonNoticePending(false);
     }
   };
 
@@ -592,6 +607,46 @@ function SettingsView() {
         )}
         {spectrumConnected === true && (
           <p className="mt-3 text-[12.5px] font-medium text-brand">Photon Spectrum is connected. Codes go out over iMessage.</p>
+        )}
+      </section>
+
+      <section className="border-t border-line pt-5">
+        <h3 className="text-[15px] font-extrabold text-ink">Photon messages</h3>
+        <div className="mt-3 flex items-start justify-between gap-4 rounded-[14px] border border-line px-4 py-3.5">
+          <div className="min-w-0">
+            <p className="flex items-center gap-2 text-[14.5px] font-bold text-ink">
+              <Bell size={16} strokeWidth={2.2} aria-hidden className="text-brand" />
+              iMessage campus notifications
+            </p>
+            <p className="mt-1 text-[12.5px] font-medium leading-[1.4] text-muted">
+              When this is on, “I’m Going” and 30-minute reminders also go to your Photon iMessage
+              chat. Sign-in and reset codes still follow two-step verification.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={user.photonNotificationsEnabled}
+            disabled={photonNoticePending}
+            onClick={togglePhotonNotices}
+            className={cn(
+              "relative mt-0.5 h-7 w-12 shrink-0 rounded-full transition-colors",
+              user.photonNotificationsEnabled ? "bg-brand" : "bg-[#d5dbe6]",
+            )}
+          >
+            <span
+              aria-hidden
+              className={cn(
+                "absolute top-0.5 h-6 w-6 rounded-full bg-white shadow-pill transition-transform",
+                user.photonNotificationsEnabled ? "left-5" : "left-0.5",
+              )}
+            />
+          </button>
+        </div>
+        {photonNoticeError && (
+          <p role="alert" className="mt-2 text-[13px] font-semibold text-coral-text">
+            {photonNoticeError}
+          </p>
         )}
       </section>
 

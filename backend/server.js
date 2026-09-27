@@ -12,6 +12,7 @@ import {
   handleSpectrumWebhook,
   listenSpectrumMessages,
   sendSpectrumCode,
+  sendSpectrumNotice,
   sendSpectrumWelcome,
   setInboundHandler,
   setPendingCodeLookup,
@@ -83,6 +84,9 @@ if (!existingUserColumns.has('profile_private')) {
 }
 if (!existingUserColumns.has('two_factor_enabled')) {
   db.exec('ALTER TABLE users ADD COLUMN two_factor_enabled INTEGER NOT NULL DEFAULT 1');
+}
+if (!existingUserColumns.has('photon_notifications_enabled')) {
+  db.exec('ALTER TABLE users ADD COLUMN photon_notifications_enabled INTEGER NOT NULL DEFAULT 1');
 }
 
 db.exec(`
@@ -190,7 +194,8 @@ app.post('/api/spectrum/webhook', express.raw({ type: '*/*' }), async (request, 
 app.use(express.json());
 app.use(express.static(join(root, 'dist')));
 
-const USER_COLUMNS = 'id, name, email, phone, college, profile_private, two_factor_enabled';
+const USER_COLUMNS =
+  'id, name, email, phone, college, profile_private, two_factor_enabled, photon_notifications_enabled';
 
 function publicUser(row) {
   if (!row) return null;
@@ -202,6 +207,7 @@ function publicUser(row) {
     college: row.college,
     profilePrivate: Boolean(row.profile_private),
     twoFactorEnabled: row.two_factor_enabled !== 0,
+    photonNotificationsEnabled: row.photon_notifications_enabled !== 0,
   };
 }
 
@@ -414,7 +420,7 @@ function currentUser(request) {
   if (!token) return null;
   const row = db
     .prepare(
-      `SELECT users.id, users.name, users.email, users.phone, users.college, users.profile_private, users.two_factor_enabled
+      `SELECT users.id, users.name, users.email, users.phone, users.college, users.profile_private, users.two_factor_enabled, users.photon_notifications_enabled
        FROM sessions JOIN users ON users.id = sessions.user_id WHERE sessions.token = ?`,
     )
     .get(token);
@@ -520,12 +526,32 @@ app.get('/api/spectrum/status', (_request, response) => {
   response.json({ connected: spectrumConfigured() });
 });
 
+app.post('/api/notices/photon', requireUser, async (request, response) => {
+  const account = db.prepare(`SELECT ${USER_COLUMNS} FROM users WHERE id = ?`).get(request.user.id);
+  if (!account) return response.status(404).json({ error: 'That account no longer exists.' });
+  if (account.photon_notifications_enabled === 0) {
+    return response.json({ sent: false, reason: 'disabled' });
+  }
+
+  const title = typeof request.body?.title === 'string' ? request.body.title.trim() : '';
+  const body = typeof request.body?.body === 'string' ? request.body.body.trim() : '';
+  if (!title || !body) return response.status(400).json({ error: 'Need a title and a message.' });
+
+  try {
+    const result = await sendSpectrumNotice(account.phone, account.name, title, body);
+    response.json({ sent: Boolean(result.delivered), sendError: result.sendError });
+  } catch (error) {
+    response.status(500).json({ error: error.message });
+  }
+});
+
 app.get('/api/auth/me', requireUser, (request, response) => {
   response.json({ user: request.user });
 });
 
 app.patch('/api/auth/me', requireUser, (request, response) => {
-  const { name, email, phone, college, profilePrivate, twoFactorEnabled } = request.body ?? {};
+  const { name, email, phone, college, profilePrivate, twoFactorEnabled, photonNotificationsEnabled } =
+    request.body ?? {};
   const current = db.prepare(`SELECT ${USER_COLUMNS} FROM users WHERE id = ?`).get(request.user.id);
   if (!current) return response.status(404).json({ error: 'That account no longer exists.' });
 
@@ -542,6 +568,12 @@ app.patch('/api/auth/me', requireUser, (request, response) => {
     typeof profilePrivate === 'boolean' ? (profilePrivate ? 1 : 0) : current.profile_private;
   const nextTwoFactor =
     typeof twoFactorEnabled === 'boolean' ? (twoFactorEnabled ? 1 : 0) : current.two_factor_enabled;
+  const nextPhotonNotices =
+    typeof photonNotificationsEnabled === 'boolean'
+      ? photonNotificationsEnabled
+        ? 1
+        : 0
+      : current.photon_notifications_enabled;
 
   if (!nextName) return response.status(400).json({ error: 'Enter your full name.' });
   if (!nextPhone) return response.status(400).json({ error: 'Enter your phone number.' });
@@ -557,8 +589,17 @@ app.patch('/api/auth/me', requireUser, (request, response) => {
   }
 
   db.prepare(
-    'UPDATE users SET name = ?, email = ?, phone = ?, college = ?, profile_private = ?, two_factor_enabled = ? WHERE id = ?',
-  ).run(nextName, nextEmail, nextPhone, nextCollege, nextPrivate, nextTwoFactor, current.id);
+    'UPDATE users SET name = ?, email = ?, phone = ?, college = ?, profile_private = ?, two_factor_enabled = ?, photon_notifications_enabled = ? WHERE id = ?',
+  ).run(
+    nextName,
+    nextEmail,
+    nextPhone,
+    nextCollege,
+    nextPrivate,
+    nextTwoFactor,
+    nextPhotonNotices,
+    current.id,
+  );
 
   response.json({ user: publicUser(db.prepare(`SELECT ${USER_COLUMNS} FROM users WHERE id = ?`).get(current.id)) });
 });
