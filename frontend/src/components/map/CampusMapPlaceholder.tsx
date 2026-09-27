@@ -90,9 +90,12 @@ export function CampusMapPlaceholder({
           ))}
 
           {MAP_LABELS.buildings.map((building) => (
-            <MapAnchor key={building.label} x={building.x} y={building.y} inverseScale={inverseScale}>
+            <MapAnchor key={`${building.label}-${building.x}-${building.y}`} x={building.x} y={building.y} inverseScale={inverseScale}>
               <span
-                className="absolute w-max whitespace-pre-line text-center font-serif text-[15px] leading-[1.2] font-normal text-map-label [text-shadow:0_1px_3px_rgba(255,255,255,0.95)]"
+                className={cn(
+                  "absolute w-max whitespace-pre-line text-center font-serif font-normal text-map-label [text-shadow:0_1px_3px_rgba(255,255,255,0.95)]",
+                  building.minor ? "text-[12px] leading-[1.15]" : "text-[15px] leading-[1.2]",
+                )}
                 style={{ transform: "translate(-50%, -50%)" }}
               >
                 {building.label}
