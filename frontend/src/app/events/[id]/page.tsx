@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { CampusApp } from "@/components/CampusApp";
+import { RequireAuth } from "@/components/RequireAuth";
 import { MOCK_EVENTS } from "@/data/mock-events";
 
 interface EventPageProps {
@@ -31,5 +32,9 @@ export async function generateMetadata({ params }: EventPageProps): Promise<Meta
 export default async function EventPage({ params }: EventPageProps) {
   const { id } = await params;
   if (!MOCK_EVENTS.some((event) => event.id === id)) notFound();
-  return <CampusApp initialEventId={id} />;
+  return (
+    <RequireAuth>
+      <CampusApp initialEventId={id} />
+    </RequireAuth>
+  );
 }

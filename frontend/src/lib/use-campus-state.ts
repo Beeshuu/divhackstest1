@@ -48,7 +48,7 @@ function syncUrl(event: CampusEvent | null) {
 export function useCampusState(initialEventId?: string) {
   const [createdEvents, setCreatedEvents] = useState<CampusEvent[]>([]);
   const [selectedId, setSelectedId] = useState(initialEventId ?? FEATURED_EVENT_ID);
-  const [drawerOpen, setDrawerOpen] = useState(true);
+  const [drawerOpen, setDrawerOpen] = useState(Boolean(initialEventId));
   const [going, setGoing] = useState<Set<string>>(() => new Set());
   const [saved, setSaved] = useState<Set<string>>(() => new Set());
   const [query, setQuery] = useState("");
@@ -60,7 +60,7 @@ export function useCampusState(initialEventId?: string) {
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const events = useMemo(() => [...MOCK_EVENTS, ...createdEvents], [createdEvents]);
-  const selectedEvent = events.find((e) => e.id === selectedId) ?? events[0];
+  const selectedEvent = events.find((e) => e.id === selectedId);
 
   const visibleEvents = useMemo(
     () =>

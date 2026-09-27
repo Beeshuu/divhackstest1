@@ -1,11 +1,12 @@
 "use client";
 
 import { useId, useState } from "react";
-import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Bell, ChevronDown, Crown, Menu, Search, X } from "lucide-react";
+import { Bell, ChevronDown, Crown, LogOut, Menu, Search, X } from "lucide-react";
 
 import { CategoryGlyph } from "@/components/icons/CategoryIcons";
+import { useAuth } from "@/lib/auth";
 import type { CampusEvent } from "@/types/event";
 
 interface SearchProps {
@@ -198,31 +199,92 @@ function AccountCluster() {
 
       <span aria-hidden className="hidden h-[26px] w-px bg-line-strong tablet:block" />
 
+      <AccountMenu />
+    </div>
+  );
+}
+
+/** Initials stand in for a profile photo until uploads exist. */
+function initialsOf(name: string): string {
+  const parts = name.trim().split(/\s+/).slice(0, 2);
+  return parts.map((part) => part[0]?.toUpperCase() ?? "").join("") || "?";
+}
+
+function AccountMenu() {
+  const { user, signOut } = useAuth();
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+
+  const name = user?.name ?? "Your account";
+  const college = user?.college ?? "Campus Connect";
+
+  const handleSignOut = async () => {
+    setOpen(false);
+    await signOut();
+    router.replace("/login");
+  };
+
+  return (
+    <div className="relative">
       <button
         type="button"
-        aria-label="Account menu for Jamie Chen"
+        onClick={() => setOpen((value) => !value)}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        aria-label={`Account menu for ${name}`}
         className="flex items-center gap-2.5 rounded-full py-1 pl-1 pr-1 transition-colors duration-150 hover:bg-[#f5f7fb] tablet:pr-2"
       >
-        <Image
-          src="/assets/avatar-jamie.svg"
-          alt="Jamie Chen"
-          width={41}
-          height={41}
-          className="h-[41px] w-[41px] rounded-full ring-1 ring-line-strong"
-        />
-        <span className="hidden text-left leading-none desktop:block">
-          <span className="block text-[15px] font-bold text-ink">Jamie Chen</span>
-          <span className="mt-[3px] block text-[12.5px] font-medium text-muted">
-            Columbia University
+        <span
+          aria-hidden
+          className="grid h-[41px] w-[41px] shrink-0 place-items-center rounded-full bg-brand text-[15px] font-bold text-white ring-1 ring-line-strong"
+        >
+          {initialsOf(name)}
+        </span>
+        <span className="hidden max-w-[150px] text-left leading-none desktop:block">
+          <span className="block truncate text-[15px] font-bold text-ink">{name}</span>
+          <span className="mt-[3px] block truncate text-[12.5px] font-medium text-muted">
+            {college}
           </span>
         </span>
         <ChevronDown
           size={18}
           strokeWidth={2.2}
           aria-hidden
-          className="hidden text-faint desktop:block"
+          className={`hidden text-faint transition-transform desktop:block ${open ? "rotate-180" : ""}`}
         />
       </button>
+
+      {open && (
+        <>
+          <button
+            type="button"
+            aria-label="Close account menu"
+            onClick={() => setOpen(false)}
+            className="fixed inset-0 z-40 cursor-default"
+          />
+          <div
+            role="menu"
+            className="absolute right-0 top-[52px] z-50 w-[248px] overflow-hidden rounded-[16px] border border-line bg-panel p-1.5 shadow-float"
+          >
+            <div className="px-3 py-2.5">
+              <p className="truncate text-[14.5px] font-bold text-ink">{name}</p>
+              <p className="mt-[3px] truncate text-[12.5px] font-medium text-muted">
+                {user?.email ?? user?.phone ?? college}
+              </p>
+            </div>
+            <div aria-hidden className="mx-2 h-px bg-line" />
+            <button
+              type="button"
+              role="menuitem"
+              onClick={handleSignOut}
+              className="mt-1 flex w-full items-center gap-2.5 rounded-[11px] px-3 py-[9px] text-left text-[14.5px] font-semibold text-ink transition-colors duration-100 hover:bg-brand-tint hover:text-brand"
+            >
+              <LogOut size={17} strokeWidth={2.2} aria-hidden />
+              Sign out
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

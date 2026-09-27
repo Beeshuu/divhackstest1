@@ -69,7 +69,7 @@ export function CampusMapPlaceholder({
         aria-label="Campus map. Drag to pan, scroll or use plus and minus to zoom, arrow keys to move."
         className={cn(
           "absolute inset-0 touch-none select-none outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/40",
-          picking ? "cursor-crosshair" : isDragging ? "cursor-grabbing" : "cursor-grab",
+          picking ? "cursor-crosshair" : isDragging ? "cursor-grabbing-black" : "cursor-grab-black",
         )}
       >
         <motion.div
@@ -156,13 +156,13 @@ export function CampusMapPlaceholder({
   );
 }
 
-/** "You are here" dot, only rendered from a real browser location. */
+/** Live "you are here" pin. Only drawn when the browser location is on campus. */
 function UserLocationDot() {
   return (
-    <span aria-label="Your location" role="img" className="absolute grid place-items-center">
-      <span className="absolute h-[42px] w-[42px] rounded-full bg-[#1D6AEE]/12" />
-      <span className="absolute h-[27px] w-[27px] rounded-full bg-white/85" />
-      <span className="absolute h-[20px] w-[20px] rounded-full bg-[#1D6AEE] shadow-[0_1px_3px_rgba(15,37,71,0.3)]" />
+    <span aria-label="Your live location" role="img" className="absolute grid place-items-center">
+      <span className="absolute h-[46px] w-[46px] animate-ping rounded-full bg-[#1D6AEE]/25" />
+      <span className="absolute h-[32px] w-[32px] rounded-full bg-[#1D6AEE]/16" />
+      <span className="absolute h-[22px] w-[22px] rounded-full border-[3px] border-white bg-[#1D6AEE] shadow-[0_1px_4px_rgba(15,37,71,0.35)]" />
     </span>
   );
 }

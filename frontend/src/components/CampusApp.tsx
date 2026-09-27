@@ -12,9 +12,11 @@ import {
   type MapViewHandle,
 } from "@/components/map/CampusMapPlaceholder";
 import { CampusStats } from "@/components/map/CampusStats";
+import { DirectionsPrompt } from "@/components/map/DirectionsPrompt";
 import { MapEmptyState } from "@/components/map/MapEmptyState";
 import { MapFilters } from "@/components/map/MapFilters";
 import { MapToast } from "@/components/map/MapToast";
+import { OutOfReachBanner } from "@/components/map/OutOfReachBanner";
 import { PickLocationBanner } from "@/components/map/PickLocationBanner";
 import { CATEGORY_STYLE } from "@/lib/constants";
 import { geoToMap, isOnMap } from "@/lib/geo";
@@ -44,9 +46,11 @@ function emptyDraft(now = new Date()): EventDraft {
 
 const LOCATION_MESSAGES: Partial<Record<GeoStatus, string>> = {
   denied:
-    "Location access is required for location-based features like Near Me. You can allow it in your browser settings.",
-  unavailable: "Your location isn't available right now. Location-based features need it to work.",
+    "Location access is required to show your live marker. You can allow it in your browser settings.",
+  unavailable: "Your location isn't available right now, so your live marker can't be shown.",
 };
+
+const OUT_OF_REACH = "You're out of reach — your live location is outside the campus map.";
 
 /** Native share sheet when available, otherwise copy the event link. */
 async function shareEvent(event: CampusEvent, notify: (message: string) => void) {
@@ -87,9 +91,12 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
   const geo = useGeolocation();
   const [composer, setComposer] = useState<"closed" | "form" | "picking">("closed");
   const [draft, setDraft] = useState<EventDraft>(() => emptyDraft());
+  const [outOfReach, setOutOfReach] = useState(false);
+  const [hideOutOfReach, setHideOutOfReach] = useState(false);
+  const [directionsEvent, setDirectionsEvent] = useState<CampusEvent | null>(null);
   // The mobile bottom sheet would cover the map while choosing a spot.
   const isSheet = useMediaQuery("(max-width: 899px)");
-  const showDrawer = state.drawerOpen && !(isSheet && composer === "picking");
+  const showDrawer = Boolean(state.selectedEvent) && state.drawerOpen && !(isSheet && composer === "picking");
 
   const openComposer = () => {
     setSidebarOpen(false);
@@ -113,25 +120,49 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
     return () => document.removeEventListener("keydown", onKey);
   }, [composer]);
 
-  // Projected every render so the dot follows watchPosition updates.
+  // Projected every render so the live pin follows watchPosition updates.
   const userPoint = geo.position ? geoToMap(geo.position) : null;
   const userOnMap = userPoint && isOnMap(userPoint) ? userPoint : null;
 
-  /** Centres on the user, asking for permission on first use. */
-  const locateUser = async (): Promise<boolean> => {
+  useEffect(() => {
+    if (!geo.position) return;
+    const onCampus = isOnMap(geoToMap(geo.position));
+    setOutOfReach(!onCampus);
+    if (onCampus) setHideOutOfReach(false);
+  }, [geo.position]);
+
+  /** Asks for location, then shows the pin only while the user is on campus. */
+  const locateUser = async (options?: { quiet?: boolean }): Promise<boolean> => {
     const result = await geo.request();
     if (!result.position) {
+      setOutOfReach(false);
       const message = LOCATION_MESSAGES[result.status];
-      if (message) state.showToast(message);
+      if (message && !options?.quiet) state.showToast(message);
       return false;
     }
     const point = geoToMap(result.position);
     if (!isOnMap(point)) {
-      state.showToast("You're outside the campus map area, so you can't be shown on it yet.");
+      setOutOfReach(true);
+      setHideOutOfReach(false);
+      if (!options?.quiet) state.showToast(OUT_OF_REACH);
       return false;
     }
+    setOutOfReach(false);
     mapRef.current?.centerOn(point, 1.8);
     return true;
+  };
+
+  // Start watching as soon as the map is open so the live pin can appear.
+  useEffect(() => {
+    void locateUser({ quiet: true });
+    // First visit only — later updates come from watchPosition.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const openEvent = (event: CampusEvent) => {
+    state.selectEvent(event.id);
+    mapRef.current?.centerOn({ x: event.mapX, y: event.mapY });
+    setDirectionsEvent(event);
   };
 
   const handleLocateButton = async () => {
@@ -186,8 +217,11 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
           <CampusMapPlaceholder
             viewRef={mapRef}
             events={state.visibleEvents}
-            selectedEventId={state.drawerOpen ? state.selectedEvent.id : null}
-            onSelectEvent={state.selectEvent}
+            selectedEventId={state.drawerOpen && state.selectedEvent ? state.selectedEvent.id : null}
+            onSelectEvent={(id) => {
+              const event = state.events.find((item) => item.id === id);
+              if (event) openEvent(event);
+            }}
             userPoint={userOnMap}
             onLocate={handleLocateButton}
             locating={geo.status === "requesting"}
@@ -207,6 +241,10 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
             }
           />
           <PickLocationBanner visible={composer === "picking"} onCancel={() => setComposer("form")} />
+          <OutOfReachBanner
+            visible={outOfReach && !hideOutOfReach && composer !== "picking"}
+            onDismiss={() => setHideOutOfReach(true)}
+          />
           {composer !== "picking" && (
           <MapFilters
             activePill={state.mapPill}
@@ -220,7 +258,7 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
           )}
           <CampusStats />
           <MapEmptyState
-            visible={state.visibleEvents.length === 0}
+            visible={state.events.length > 0 && state.visibleEvents.length === 0}
             message={
               state.sidebarFilter === "saved" && !state.query
                 ? "You haven't saved any events yet — use the bookmark on an event."
@@ -241,7 +279,7 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
         />
 
         <AnimatePresence initial={false}>
-          {showDrawer && (
+          {showDrawer && state.selectedEvent && (
             <EventDrawer
               event={state.selectedEvent}
               onClose={state.closeDrawer}
@@ -250,10 +288,17 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
               isSaved={state.saved.has(state.selectedEvent.id)}
               onToggleSaved={() => state.toggleSaved(state.selectedEvent.id)}
               onShare={() => shareEvent(state.selectedEvent, state.showToast)}
+              onDirections={() => setDirectionsEvent(state.selectedEvent)}
             />
           )}
         </AnimatePresence>
       </div>
+
+      <DirectionsPrompt
+        event={directionsEvent}
+        origin={geo.position}
+        onClose={() => setDirectionsEvent(null)}
+      />
     </div>
   );
 }

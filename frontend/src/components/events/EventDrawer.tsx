@@ -21,7 +21,6 @@ import { CategoryHeroArt } from "./CategoryHeroArt";
 import { EventHeroArt } from "./EventHeroArt";
 import { CategoryGlyph, PeopleIcon } from "@/components/icons/CategoryIcons";
 import { MARKER_PALETTE } from "@/lib/constants";
-import { directionsUrl } from "@/lib/directions";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { cn, formatCount } from "@/lib/utils";
 import type { CampusEvent } from "@/types/event";
@@ -36,6 +35,7 @@ interface EventDrawerProps {
   isSaved: boolean;
   onToggleSaved: () => void;
   onShare: () => void;
+  onDirections: () => void;
 }
 
 /**
@@ -113,6 +113,7 @@ function DrawerCard({
   isSaved,
   onToggleSaved,
   onShare,
+  onDirections,
 }: EventDrawerProps) {
   const palette = MARKER_PALETTE[event.markerColor];
   const goingCount = event.goingCount + (isGoing ? 1 : 0);
@@ -279,18 +280,17 @@ function DrawerCard({
           {isGoing ? "You're Going" : "I'm Going"}
         </motion.button>
 
-        <motion.a
-          href={directionsUrl(event)}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label={`Directions to ${event.locationName} (opens in a new tab)`}
+        <motion.button
+          type="button"
+          onClick={onDirections}
+          aria-label={`Get directions to ${event.locationName}`}
           whileTap={{ scale: 0.98 }}
           transition={{ duration: 0.15, ease: "easeOut" }}
           className="mt-[9px] flex h-[42px] w-full items-center justify-center gap-[9px] rounded-[13px] bg-brand-soft text-[16px] font-bold text-brand transition-colors duration-150 hover:bg-[#dde8fa]"
         >
           <Navigation size={17} strokeWidth={2.2} aria-hidden className="fill-brand" />
           Directions
-        </motion.a>
+        </motion.button>
 
         <div className="mt-[18px] flex items-start gap-[11px]">
           <CalendarDays

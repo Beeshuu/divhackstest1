@@ -1,17 +1,42 @@
-import { mapToGeo } from "./geo";
+import { mapToGeo, type LatLng } from "./geo";
 import type { CampusEvent } from "@/types/event";
 
-/**
- * Standard Google Maps directions link — opened in a new tab, no maps SDK.
- * Built-in events route to their street address; events pinned in this session
- * route to the coordinates of their pin.
- */
-export function directionsUrl(event: CampusEvent): string {
-  const destination = event.isTemporary
-    ? (() => {
-        const { lat, lng } = mapToGeo({ x: event.mapX, y: event.mapY });
-        return `${lat.toFixed(6)},${lng.toFixed(6)}`;
-      })()
-    : `${event.address}, New York, NY`;
-  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}&travelmode=walking`;
+function destinationFor(event: CampusEvent): string {
+  if (event.isTemporary) {
+    const { lat, lng } = mapToGeo({ x: event.mapX, y: event.mapY });
+    return `${lat.toFixed(6)},${lng.toFixed(6)}`;
+  }
+  return `${event.address}, New York, NY`;
+}
+
+function originParam(origin?: LatLng | null): string {
+  return origin ? `${origin.lat.toFixed(6)},${origin.lng.toFixed(6)}` : "";
+}
+
+/** Walking directions in Google Maps. */
+export function googleDirectionsUrl(event: CampusEvent, origin?: LatLng | null): string {
+  const params = new URLSearchParams({
+    api: "1",
+    destination: destinationFor(event),
+    travelmode: "walking",
+  });
+  const from = originParam(origin);
+  if (from) params.set("origin", from);
+  return `https://www.google.com/maps/dir/?${params.toString()}`;
+}
+
+/** Walking directions in Apple Maps. */
+export function appleDirectionsUrl(event: CampusEvent, origin?: LatLng | null): string {
+  const params = new URLSearchParams({
+    daddr: destinationFor(event),
+    dirflg: "w",
+  });
+  const from = originParam(origin);
+  if (from) params.set("saddr", from);
+  return `https://maps.apple.com/?${params.toString()}`;
+}
+
+/** @deprecated Prefer googleDirectionsUrl — kept for any leftover callers. */
+export function directionsUrl(event: CampusEvent, origin?: LatLng | null): string {
+  return googleDirectionsUrl(event, origin);
 }

@@ -32,8 +32,8 @@ export function EventHeroArt() {
           <stop offset="1" stopColor="#F0BE62" />
         </linearGradient>
         <linearGradient id="hero-hand" x1="0" y1="0" x2="0.3" y2="1">
-          <stop offset="0" stopColor="#EFC4A2" />
-          <stop offset="1" stopColor="#D4A07C" />
+          <stop offset="0" stopColor="#1A1A1A" />
+          <stop offset="1" stopColor="#000000" />
         </linearGradient>
         <filter id="hero-blur" x="-25%" y="-25%" width="150%" height="150%">
           <feGaussianBlur stdDeviation="11" />
@@ -151,10 +151,10 @@ export function EventHeroArt() {
           d="M-40 74 q50 -10 82 10 q18 12 10 30 q-10 22 -40 20 q-38 -3 -60 -18 Z"
           fill="url(#hero-hand)"
         />
-        <path d="M4 76 q28 -2 44 14" stroke="#CE9673" strokeWidth="3.2" fill="none" strokeLinecap="round" />
+        <path d="M4 76 q28 -2 44 14" stroke="#000000" strokeWidth="3.2" fill="none" strokeLinecap="round" />
         <path
           d="M-4 96 q28 -2 42 12"
-          stroke="#CE9673"
+          stroke="#111111"
           strokeWidth="2.6"
           fill="none"
           strokeLinecap="round"
