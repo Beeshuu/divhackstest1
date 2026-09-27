@@ -22,7 +22,15 @@ import { MapFilters } from "@/components/map/MapFilters";
 import { MapToast } from "@/components/map/MapToast";
 import { OutOfReachBanner } from "@/components/map/OutOfReachBanner";
 import { PickLocationBanner } from "@/components/map/PickLocationBanner";
-import { campusFromCollege, campusMapKey, campusMapToGeo, geoToCampusMap, isOnCampusPlan } from "@/lib/campuses";
+import {
+  campusFromCollege,
+  campusMapKey,
+  campusMapToGeo,
+  eventCampusId,
+  geoToCampusMap,
+  isOnCampusPlan,
+  sharesCampusMap,
+} from "@/lib/campuses";
 import { CATEGORY_STYLE } from "@/lib/constants";
 import { useAuth } from "@/lib/auth";
 import { useCampusNotices } from "@/lib/use-campus-notices";
@@ -175,6 +183,9 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
   }, [composer]);
 
   // Projected every render so the live pin follows watchPosition updates.
+  const campusEvents = state.events.filter((event) =>
+    sharesCampusMap(eventCampusId(event), campus.spec.id),
+  );
   const userPoint = geo.position ? geoToCampusMap(geo.position, campus.spec.id) : null;
   const userOnMap = userPoint && isOnCampusPlan(userPoint) ? userPoint : null;
 
@@ -354,8 +365,8 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
           />
           )}
           <CampusStats
-            events={state.events}
-            goingCount={state.events.reduce((total, event) => total + event.goingCount, 0) + state.going.size}
+            events={campusEvents}
+            goingCount={campusEvents.reduce((total, event) => total + event.goingCount, 0) + state.going.size}
             active={
               state.categoryFilter === "Free Food"
                 ? "freeFood"

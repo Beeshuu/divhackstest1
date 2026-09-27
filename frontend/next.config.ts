@@ -9,6 +9,8 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.resolve(__dirname),
   },
+  // Headless Chrome in this environment opens 127.0.0.1; Next blocks that host by default.
+  allowedDevOrigins: ["127.0.0.1", "localhost"],
   // The floating dev badge sits on top of the map controls during visual review.
   devIndicators: false,
   async rewrites() {
