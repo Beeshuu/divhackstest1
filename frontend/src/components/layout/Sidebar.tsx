@@ -4,6 +4,7 @@ import type { ComponentType } from "react";
 import { motion } from "framer-motion";
 import { Plus, X } from "lucide-react";
 
+import { GeminiSparkle } from "@/components/gemini/GeminiSparkle";
 import {
   BasketballIcon,
   BookmarkIcon,
@@ -47,10 +48,11 @@ interface SidebarProps {
   onSelect: (filter: SidebarFilter) => void;
   savedCount: number;
   onPostEvent: () => void;
+  onAskGemini: () => void;
 }
 
 /** Category rail: filters the events shown on the map. */
-export function Sidebar({ isOpen, onClose, selected: selectedFilter, onSelect, savedCount, onPostEvent }: SidebarProps) {
+export function Sidebar({ isOpen, onClose, selected: selectedFilter, onSelect, savedCount, onPostEvent, onAskGemini }: SidebarProps) {
   return (
     <aside
       aria-label="Event categories"
@@ -108,6 +110,19 @@ export function Sidebar({ isOpen, onClose, selected: selectedFilter, onSelect, s
       >
         <Plus size={19} strokeWidth={2.8} aria-hidden />
         Post Event
+      </motion.button>
+
+      <motion.button
+        type="button"
+        onClick={onAskGemini}
+        whileHover={{ y: -1 }}
+        whileTap={{ scale: 0.98, y: 0 }}
+        transition={{ duration: 0.15, ease: "easeOut" }}
+        className="mt-2.5 flex h-12 w-full items-center justify-center gap-2 rounded-xl text-[16px] font-bold text-white shadow-[0_6px_16px_rgb(109_40_217_/_0.22)] transition-opacity duration-150 hover:opacity-95"
+        style={{ background: "linear-gradient(135deg, #4B8BFF 0%, #7C5CFF 48%, #C084FC 100%)" }}
+      >
+        <GeminiSparkle size={18} />
+        Ask Gemini
       </motion.button>
     </aside>
   );

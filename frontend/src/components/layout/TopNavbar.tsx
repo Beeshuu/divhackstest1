@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Bell, ChevronDown, Crown, LogOut, Menu, Search, X } from "lucide-react";
 
+import { GeminiSparkle } from "@/components/gemini/GeminiSparkle";
 import { CategoryGlyph } from "@/components/icons/CategoryIcons";
 import { useAuth } from "@/lib/auth";
 import type { CampusEvent } from "@/types/event";
@@ -19,13 +20,14 @@ interface SearchProps {
 
 interface TopNavbarProps extends SearchProps {
   onOpenSidebar: () => void;
+  onAskGemini: () => void;
 }
 
 /**
  * Fixed-height application header: brand block, local event search and the
  * account cluster. Search only looks at events already in the browser.
  */
-export function TopNavbar({ onOpenSidebar, ...search }: TopNavbarProps) {
+export function TopNavbar({ onOpenSidebar, onAskGemini, ...search }: TopNavbarProps) {
   return (
     <header className="z-30 flex h-[72px] shrink-0 items-center border-b border-line bg-panel">
       <div className="flex w-[196px] shrink-0 items-center gap-2 pl-4 tablet:w-[236px] tablet:gap-2.5 tablet:pl-5 desktop:w-[276px]">
@@ -59,7 +61,7 @@ export function TopNavbar({ onOpenSidebar, ...search }: TopNavbarProps) {
         <SearchField {...search} />
       </div>
 
-      <AccountCluster />
+      <AccountCluster onAskGemini={onAskGemini} />
     </header>
   );
 }
@@ -179,9 +181,22 @@ function SearchField({ query, onQueryChange, results, onSelectResult }: SearchPr
   );
 }
 
-function AccountCluster() {
+function AccountCluster({ onAskGemini }: { onAskGemini: () => void }) {
   return (
     <div className="flex shrink-0 items-center gap-2 pr-4 tablet:gap-3.5 tablet:pr-[25px]">
+      <motion.button
+        type="button"
+        onClick={onAskGemini}
+        aria-label="Ask Gemini"
+        whileHover={{ y: -1 }}
+        whileTap={{ scale: 0.94 }}
+        transition={{ duration: 0.14, ease: "easeOut" }}
+        className="flex h-10 items-center gap-1.5 rounded-full px-2 text-ink-soft transition-colors duration-150 hover:bg-[#f3eefe] hover:text-[#6D28D9] tablet:px-3"
+      >
+        <GeminiSparkle size={18} />
+        <span className="hidden text-[14px] font-bold tablet:inline">Ask Gemini</span>
+      </motion.button>
+
       <motion.button
         type="button"
         aria-label="Notifications, 1 unread"

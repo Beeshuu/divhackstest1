@@ -5,6 +5,7 @@ import { AnimatePresence } from "framer-motion";
 
 import { CreateEventModal } from "@/components/events/CreateEventModal";
 import { EventDrawer } from "@/components/events/EventDrawer";
+import { AskGeminiPanel } from "@/components/gemini/AskGeminiPanel";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopNavbar } from "@/components/layout/TopNavbar";
 import {
@@ -94,14 +95,21 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
   const [outOfReach, setOutOfReach] = useState(false);
   const [hideOutOfReach, setHideOutOfReach] = useState(false);
   const [directionsEvent, setDirectionsEvent] = useState<CampusEvent | null>(null);
+  const [geminiOpen, setGeminiOpen] = useState(false);
   // The mobile bottom sheet would cover the map while choosing a spot.
   const isSheet = useMediaQuery("(max-width: 899px)");
-  const showDrawer = Boolean(state.selectedEvent) && state.drawerOpen && !(isSheet && composer === "picking");
+  const selected = state.selectedEvent;
+  const showDrawer = Boolean(selected) && state.drawerOpen && !(isSheet && composer === "picking");
 
   const openComposer = () => {
     setSidebarOpen(false);
     if (!draft.title && !draft.point) setDraft(emptyDraft());
     setComposer("form");
+  };
+
+  const openGemini = () => {
+    setSidebarOpen(false);
+    setGeminiOpen(true);
   };
 
   const submitDraft = () => {
@@ -182,6 +190,7 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
     <div className="flex h-screen min-h-screen flex-col overflow-hidden bg-canvas">
       <TopNavbar
         onOpenSidebar={() => setSidebarOpen(true)}
+        onAskGemini={openGemini}
         query={state.query}
         onQueryChange={state.setQuery}
         results={state.visibleEvents}
@@ -202,6 +211,7 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
           }}
           savedCount={state.saved.size}
           onPostEvent={openComposer}
+          onAskGemini={openGemini}
         />
 
         {sidebarOpen && (
@@ -267,6 +277,16 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
             onReset={state.clearFilters}
           />
           <MapToast toast={state.toast} onDismiss={state.dismissToast} />
+          <AskGeminiPanel
+            open={geminiOpen}
+            onClose={() => setGeminiOpen(false)}
+            events={state.visibleEvents.length > 0 ? state.visibleEvents : state.events}
+            selectedEvent={selected ?? null}
+            onSelectEvent={(event) => {
+              setGeminiOpen(false);
+              openEvent(event);
+            }}
+          />
         </main>
 
         <CreateEventModal
@@ -279,16 +299,16 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
         />
 
         <AnimatePresence initial={false}>
-          {showDrawer && state.selectedEvent && (
+          {showDrawer && selected && (
             <EventDrawer
-              event={state.selectedEvent}
+              event={selected}
               onClose={state.closeDrawer}
-              isGoing={state.going.has(state.selectedEvent.id)}
-              onToggleGoing={() => state.toggleGoing(state.selectedEvent.id)}
-              isSaved={state.saved.has(state.selectedEvent.id)}
-              onToggleSaved={() => state.toggleSaved(state.selectedEvent.id)}
-              onShare={() => shareEvent(state.selectedEvent, state.showToast)}
-              onDirections={() => setDirectionsEvent(state.selectedEvent)}
+              isGoing={state.going.has(selected.id)}
+              onToggleGoing={() => state.toggleGoing(selected.id)}
+              isSaved={state.saved.has(selected.id)}
+              onToggleSaved={() => state.toggleSaved(selected.id)}
+              onShare={() => shareEvent(selected, state.showToast)}
+              onDirections={() => setDirectionsEvent(selected)}
             />
           )}
         </AnimatePresence>
