@@ -167,7 +167,7 @@ export function answerCampusQuestion(
 
   if (includesAny(query, ["post", "create", "host", "publish", "list an event"])) {
     return {
-      text: "Tap Post Event in the sidebar, add a title, time, and optional photos, then Choose on map. The first photo becomes your User Led map pin. Official campus-calendar events cannot have host photos.",
+      text: "Tap Post Event in the sidebar, add a title, time, and optional photos, then Choose on map — or set Location to Virtual for an online meetup. Virtual listings skip the pin and show under Remote and User Led Events. The first photo becomes your User Led map pin. Official campus-calendar events cannot have host photos.",
       matches: [],
     };
   }
@@ -208,7 +208,7 @@ export function answerCampusQuestion(
 
   if (includesAny(query, ["remote", "online", "zoom", "virtual"])) {
     return {
-      text: `Remote in the sidebar lists online events. Close the popup with the X, Escape, or by tapping Remote again. ${remote.length ? `There ${remote.length === 1 ? "is" : "are"} ${remote.length} right now:\n${listEvents(remote)}` : "No remote events are listed right now."}`,
+      text: `Remote in the sidebar lists official online events and student-posted virtual meetups. Close the popup with the X, Escape, or by tapping Remote again. ${remote.length ? `There ${remote.length === 1 ? "is" : "are"} ${remote.length} right now:\n${listEvents(remote)}` : "No remote events are listed right now."}`,
       matches: remote,
     };
   }

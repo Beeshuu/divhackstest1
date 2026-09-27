@@ -105,6 +105,8 @@ export interface EventDraft {
   endTime: string;
   /** Pin position on the campus map in %, set via "Choose on map". */
   point: { x: number; y: number } | null;
+  /** On-campus pin or a virtual / online meeting. */
+  locationKind: "mapped" | "remote";
   /** Host photos for this User Led post. The first one is the map marker. */
   images: EventImage[];
 }

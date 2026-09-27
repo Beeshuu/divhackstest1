@@ -59,6 +59,7 @@ function emptyDraft(now = new Date()): EventDraft {
     startTime: `${pad(start.getHours())}:${pad(start.getMinutes())}`,
     endTime,
     point: null,
+    locationKind: "mapped",
     images: [],
   };
 }
@@ -137,7 +138,7 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
 
   const openComposer = () => {
     setSidebarOpen(false);
-    if (!draft.title && !draft.point) setDraft(emptyDraft());
+    if (!draft.title && !draft.point && draft.locationKind !== "remote") setDraft(emptyDraft());
     setComposer("form");
   };
 
@@ -149,16 +150,25 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
   const submitDraft = () => {
     const created = state.createEvent(draft, user?.name ?? "You", campus.spec.id);
     if (!created) return;
+    const remote = created.locationKind === "remote";
     setComposer("closed");
     setDraft(emptyDraft());
-    mapRef.current?.centerOn({ x: created.mapX, y: created.mapY });
-    state.showToast("Your event is on the map. Other students will see it under User Led Events.");
+    if (!remote) mapRef.current?.centerOn({ x: created.mapX, y: created.mapY });
+    state.showToast(
+      remote
+        ? "Your virtual event is posted. Other students will see it under User Led Events and Remote."
+        : "Your event is on the map. Other students will see it under User Led Events.",
+    );
 
-    if (!draft.point) return;
     const start = dateTodayAt(draft.startTime);
     const end = dateTodayAt(draft.endTime);
     if (end <= start) end.setDate(end.getDate() + 1);
-    const geo = campusMapToGeo(draft.point, campus.spec.id);
+    const geo =
+      created.latitude != null && created.longitude != null
+        ? { lat: created.latitude, lng: created.longitude }
+        : draft.point
+          ? campusMapToGeo(draft.point, campus.spec.id)
+          : campusMapToGeo(campus.spec.home, campus.spec.id);
     void authFetch("/api/events", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -170,6 +180,7 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
         address: created.address,
         latitude: geo.lat,
         longitude: geo.lng,
+        locationKind: created.locationKind,
         startsAt: start.toISOString(),
         closesAt: end.toISOString(),
       }),
@@ -241,7 +252,9 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
 
   const openEvent = (event: CampusEvent) => {
     state.selectEvent(event.id);
-    mapRef.current?.centerOn({ x: event.mapX, y: event.mapY });
+    if (event.locationKind !== "tbd" && event.locationKind !== "remote") {
+      mapRef.current?.centerOn({ x: event.mapX, y: event.mapY });
+    }
   };
 
   const handleLocateButton = async () => {

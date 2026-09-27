@@ -126,6 +126,7 @@ const EVENT_COLUMN_ADDITIONS = {
   host: "TEXT NOT NULL DEFAULT ''",
   starts_at: 'TEXT',
   created_by: 'INTEGER',
+  location_kind: "TEXT NOT NULL DEFAULT 'mapped'",
 };
 const existingEventColumns = new Set(db.prepare('PRAGMA table_info(events)').all().map((column) => column.name));
 for (const [column, definition] of Object.entries(EVENT_COLUMN_ADDITIONS)) {
@@ -728,7 +729,7 @@ app.post('/api/auth/reset-password', (request, response) => {
 const EVENT_FIELDS = `
   events.id, events.title, events.category, events.description, events.location_name,
   events.address, events.host, events.latitude, events.longitude, events.players_needed,
-  events.starts_at, events.closes_at, events.created_at, events.created_by,
+  events.starts_at, events.closes_at, events.created_at, events.created_by, events.location_kind,
   events.joined_count + (
     SELECT COUNT(*) FROM event_attendees WHERE event_attendees.event_id = events.id
   ) AS joined_count
@@ -817,10 +818,11 @@ app.get('/api/events/:id', (request, response) => {
 });
 
 app.post('/api/events', requireUser, (request, response) => {
-  const { title, category, description, locationName, address, latitude, longitude, playersNeeded, startsAt, closesAt } =
+  const { title, category, description, locationName, address, latitude, longitude, playersNeeded, startsAt, closesAt, locationKind } =
     request.body ?? {};
   const cleanTitle = typeof title === 'string' ? title.trim() : '';
   const cleanCategory = typeof category === 'string' ? category.trim() : '';
+  const kind = locationKind === 'remote' ? 'remote' : 'mapped';
   const closes = new Date(closesAt);
   const starts = startsAt ? new Date(startsAt) : new Date();
 
@@ -829,7 +831,9 @@ app.post('/api/events', requireUser, (request, response) => {
     return response.status(400).json({ error: 'Choose one of the Campus Connect categories.' });
   }
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || !isOnCampus(latitude, longitude)) {
-    return response.status(400).json({ error: 'Pick a spot inside the campus map.' });
+    return response.status(400).json({
+      error: kind === 'remote' ? 'Virtual events still need to belong to a campus.' : 'Pick a spot inside the campus map.',
+    });
   }
   if (Number.isNaN(starts.valueOf()) || Number.isNaN(closes.valueOf()) || closes <= starts) {
     return response.status(400).json({ error: 'The end time has to come after the start time.' });
@@ -847,15 +851,15 @@ app.post('/api/events', requireUser, (request, response) => {
     .prepare(
       `INSERT INTO events
          (title, category, description, location_name, address, host, latitude, longitude,
-          players_needed, joined_count, starts_at, closes_at, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)`,
+          players_needed, joined_count, starts_at, closes_at, created_by, location_kind)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)`,
     )
     .run(
       cleanTitle,
       cleanCategory,
       typeof description === 'string' ? description.trim() : '',
-      typeof locationName === 'string' ? locationName.trim() : '',
-      typeof address === 'string' ? address.trim() : '',
+      typeof locationName === 'string' ? locationName.trim() : kind === 'remote' ? 'Virtual' : '',
+      typeof address === 'string' ? address.trim() : kind === 'remote' ? 'Online event' : '',
       request.user.name,
       latitude,
       longitude,
@@ -863,6 +867,7 @@ app.post('/api/events', requireUser, (request, response) => {
       starts.toISOString(),
       closes.toISOString(),
       request.user.id,
+      kind,
     );
   response.status(201).json(findEvent(result.lastInsertRowid, request.user.id));
 });

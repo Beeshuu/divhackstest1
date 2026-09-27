@@ -11,7 +11,7 @@ import {
   timeStatusFromDates,
 } from "./utils";
 import { communityEventFromApi } from "./community-events";
-import { campusMapToGeo, eventCampusId, sharesCampusMap, type CampusId } from "./campuses";
+import { campusMapToGeo, eventCampusId, getCampus, sharesCampusMap, type CampusId } from "./campuses";
 import { pickTrendingEvents } from "./trending-events";
 import { FEATURED_EVENT_ID, MOCK_EVENTS } from "@/data/mock-events";
 import { isUserLedEvent, USER_LED_EVENTS } from "@/data/user-led-events";
@@ -141,12 +141,21 @@ export function useCampusState(
         .map((row) => communityEventFromApi(row as Parameters<typeof communityEventFromApi>[0], userId))
         .filter((event): event is CampusEvent => Boolean(event));
       setCommunityEvents(mapped);
-      setCreatedEvents((prev) =>
-        prev.filter(
+      setCreatedEvents((prev) => {
+        const remaining = prev.filter(
           (created) =>
             !mapped.some((live) => live.hostedByMe && live.title === created.title && live.source === "user"),
-        ),
-      );
+        );
+        setSelectedId((current) => {
+          const replaced = prev.find((created) => created.id === current);
+          if (!replaced) return current;
+          const live = mapped.find(
+            (event) => event.hostedByMe && event.title === replaced.title && event.source === "user",
+          );
+          return live?.id ?? current;
+        });
+        return remaining;
+      });
     } catch {
       // Seeded student events still fill User Led Events if the API is down.
     }
@@ -265,7 +274,10 @@ export function useCampusState(
 
   const createEvent = useCallback(
     (draft: EventDraft, hostName = "You", eventCampusIdValue: CampusId = campusId): CampusEvent | null => {
-      if (!draft.point) return null;
+      const remote = draft.locationKind === "remote";
+      if (!remote && !draft.point) return null;
+      const point = draft.point ?? getCampus(eventCampusIdValue).spec.home;
+      const geo = campusMapToGeo(point, eventCampusIdValue);
       const style = CATEGORY_STYLE[draft.category];
       const start = dateTodayAt(draft.startTime);
       const end = dateTodayAt(draft.endTime);
@@ -274,12 +286,12 @@ export function useCampusState(
         id: `temp-${Date.now()}`,
         title: draft.title.trim(),
         category: draft.category,
-        locationName: draft.locationName.trim() || "Pinned location",
-        address: draft.locationName.trim() || "Pinned on the campus map",
+        locationName: draft.locationName.trim() || (remote ? "Virtual" : "Pinned location"),
+        address: draft.locationName.trim() || (remote ? "Online event" : "Pinned on the campus map"),
         description: draft.description.trim() || "No description provided.",
-        mapX: draft.point.x,
-        mapY: draft.point.y,
-        distance: "On campus",
+        mapX: point.x,
+        mapY: point.y,
+        distance: remote ? "Remote" : "On campus",
         timeStatus: timeStatusFromDates(start, end),
         startTime: formatClock(draft.startTime),
         endTime: formatClock(draft.endTime),
@@ -292,12 +304,12 @@ export function useCampusState(
         markerColor: style.markerColor,
         iconType: style.iconType,
         isTemporary: true,
-        locationKind: "mapped",
+        locationKind: remote ? "remote" : "mapped",
         source: "user",
         hostedByMe: true,
         campusId: eventCampusIdValue,
-        latitude: campusMapToGeo(draft.point, eventCampusIdValue).lat,
-        longitude: campusMapToGeo(draft.point, eventCampusIdValue).lng,
+        latitude: geo.lat,
+        longitude: geo.lng,
         images: draft.images ?? [],
         primaryImageUrl: draft.images?.find((image) => image.isPrimary)?.url ?? draft.images?.[0]?.url,
       };
