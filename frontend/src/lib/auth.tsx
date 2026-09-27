@@ -19,6 +19,7 @@ export interface AuthUser {
   phone: string;
   college: string;
   profilePrivate: boolean;
+  twoFactorEnabled: boolean;
 }
 
 export interface ProfileUpdate {
@@ -27,6 +28,7 @@ export interface ProfileUpdate {
   phone?: string;
   college?: string;
   profilePrivate?: boolean;
+  twoFactorEnabled?: boolean;
 }
 
 export interface SignUpInput {
@@ -39,11 +41,32 @@ export interface SignUpInput {
 
 export type AuthStatus = "loading" | "authenticated" | "anonymous";
 
+export interface AuthChallenge {
+  challengeId: string;
+  phoneHint: string;
+  channel: "imessage" | "demo" | string;
+  demoCode?: string;
+}
+
+export interface SignInResult {
+  requiresSecondFactor: boolean;
+  challenge?: AuthChallenge;
+}
+
 interface AuthValue {
   user: AuthUser | null;
   status: AuthStatus;
   signUp: (input: SignUpInput) => Promise<void>;
-  signIn: (identifier: string, password: string) => Promise<void>;
+  signIn: (identifier: string, password: string) => Promise<SignInResult>;
+  verifySecondFactor: (challengeId: string, code: string, inbound?: boolean) => Promise<void>;
+  requestPasswordReset: (phone: string) => Promise<AuthChallenge>;
+  resetPassword: (input: {
+    phone?: string;
+    challengeId?: string;
+    code?: string;
+    inbound?: boolean;
+    newPassword: string;
+  }) => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (input: ProfileUpdate) => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
@@ -73,6 +96,10 @@ function asUser(value: unknown): AuthUser {
     phone: String(row.phone ?? ""),
     college: String(row.college ?? ""),
     profilePrivate: Boolean(row.profilePrivate ?? row.profile_private),
+    twoFactorEnabled:
+      typeof row.twoFactorEnabled === "boolean"
+        ? row.twoFactorEnabled
+        : row.two_factor_enabled !== 0,
   };
 }
 
@@ -125,14 +152,73 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [adopt],
   );
 
-  const signIn = useCallback(
-    async (identifier: string, password: string) => {
-      const response = await fetch("/api/auth/login", {
+  const signIn = useCallback(async (identifier: string, password: string) => {
+    const response = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ identifier, password }),
+    });
+    if (!response.ok) throw await errorFrom(response, "Could not sign you in.");
+    const body = await response.json();
+    if (body.requiresSecondFactor) {
+      return {
+        requiresSecondFactor: true,
+        challenge: {
+          challengeId: String(body.challengeId ?? ""),
+          phoneHint: typeof body.phoneHint === "string" ? body.phoneHint : "your phone",
+          channel: typeof body.channel === "string" ? body.channel : "demo",
+          demoCode: typeof body.demoCode === "string" ? body.demoCode : undefined,
+        },
+      };
+    }
+    adopt(body.token, body.user);
+    return { requiresSecondFactor: false };
+  }, [adopt]);
+
+  const verifySecondFactor = useCallback(
+    async (challengeId: string, code: string, inbound = false) => {
+      const response = await fetch("/api/auth/verify-login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ identifier, password }),
+        body: JSON.stringify({ challengeId, code, inbound }),
       });
-      if (!response.ok) throw await errorFrom(response, "Could not sign you in.");
+      if (!response.ok) throw await errorFrom(response, "Could not verify that code.");
+      const body = await response.json();
+      adopt(body.token, body.user);
+    },
+    [adopt],
+  );
+
+  const requestPasswordReset = useCallback(async (phone: string) => {
+    const response = await fetch("/api/auth/forgot-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone }),
+    });
+    if (!response.ok) throw await errorFrom(response, "Could not send a reset code.");
+    const body = await response.json();
+    return {
+      challengeId: String(body.challengeId ?? ""),
+      phoneHint: typeof body.phoneHint === "string" ? body.phoneHint : "your phone",
+      channel: typeof body.channel === "string" ? body.channel : "demo",
+      demoCode: typeof body.demoCode === "string" ? body.demoCode : undefined,
+    };
+  }, []);
+
+  const resetPassword = useCallback(
+    async (input: {
+      phone?: string;
+      challengeId?: string;
+      code?: string;
+      inbound?: boolean;
+      newPassword: string;
+    }) => {
+      const response = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      });
+      if (!response.ok) throw await errorFrom(response, "Could not reset your password.");
       const body = await response.json();
       adopt(body.token, body.user);
     },
@@ -187,8 +273,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, status, signUp, signIn, signOut, updateProfile, changePassword, authFetch }),
-    [user, status, signUp, signIn, signOut, updateProfile, changePassword, authFetch],
+    () => ({
+      user,
+      status,
+      signUp,
+      signIn,
+      verifySecondFactor,
+      requestPasswordReset,
+      resetPassword,
+      signOut,
+      updateProfile,
+      changePassword,
+      authFetch,
+    }),
+    [user, status, signUp, signIn, verifySecondFactor, requestPasswordReset, resetPassword, signOut, updateProfile, changePassword, authFetch],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

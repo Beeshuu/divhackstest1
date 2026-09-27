@@ -12,6 +12,7 @@ import {
   MapPin,
   Phone,
   Shield,
+  ShieldCheck,
   User,
   X,
 } from "lucide-react";
@@ -130,7 +131,7 @@ export function AccountPanel({
                 <p className="mt-[3px] text-[14px] font-medium text-muted">
                   {view === "profile"
                     ? "Events you’ve attended, hosted, and plan to go to."
-                    : "Account details, password, and profile privacy."}
+                    : "Account details, password, two-step verification, and profile privacy."}
                 </p>
               </div>
               <button
@@ -297,6 +298,24 @@ function SettingsView() {
 
   const [privacyPending, setPrivacyPending] = useState(false);
   const [privacyError, setPrivacyError] = useState<string | null>(null);
+  const [twoFactorPending, setTwoFactorPending] = useState(false);
+  const [twoFactorError, setTwoFactorError] = useState<string | null>(null);
+  const [spectrumConnected, setSpectrumConnected] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/spectrum/status")
+      .then((response) => response.json())
+      .then((body) => {
+        if (active) setSpectrumConnected(Boolean(body.connected));
+      })
+      .catch(() => {
+        if (active) setSpectrumConnected(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   if (!user) return null;
 
@@ -350,6 +369,18 @@ function SettingsView() {
       setPrivacyError(cause instanceof Error ? cause.message : "Could not update privacy.");
     } finally {
       setPrivacyPending(false);
+    }
+  };
+
+  const toggleTwoFactor = async () => {
+    setTwoFactorError(null);
+    setTwoFactorPending(true);
+    try {
+      await updateProfile({ twoFactorEnabled: !user.twoFactorEnabled });
+    } catch (cause) {
+      setTwoFactorError(cause instanceof Error ? cause.message : "Could not update two-step verification.");
+    } finally {
+      setTwoFactorPending(false);
     }
   };
 
@@ -509,6 +540,59 @@ function SettingsView() {
             {passwordPending ? "Updating…" : "Update password"}
           </button>
         </form>
+      </section>
+
+      <section className="border-t border-line pt-5">
+        <h3 className="text-[15px] font-extrabold text-ink">Two-step verification</h3>
+        <div className="mt-3 flex items-start justify-between gap-4 rounded-[14px] border border-line px-4 py-3.5">
+          <div className="min-w-0">
+            <p className="flex items-center gap-2 text-[14.5px] font-bold text-ink">
+              <ShieldCheck size={16} strokeWidth={2.2} aria-hidden className="text-brand" />
+              Require a Photon code to sign in
+            </p>
+            <p className="mt-1 text-[12.5px] font-medium leading-[1.4] text-muted">
+              When this is on, Campus Connect iMessages a 6-digit code after your password.
+              Password reset still uses Photon either way.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={user.twoFactorEnabled}
+            disabled={twoFactorPending}
+            onClick={toggleTwoFactor}
+            className={cn(
+              "relative mt-0.5 h-7 w-12 shrink-0 rounded-full transition-colors",
+              user.twoFactorEnabled ? "bg-brand" : "bg-[#d5dbe6]",
+            )}
+          >
+            <span
+              aria-hidden
+              className={cn(
+                "absolute top-0.5 h-6 w-6 rounded-full bg-white shadow-pill transition-transform",
+                user.twoFactorEnabled ? "left-5" : "left-0.5",
+              )}
+            />
+          </button>
+        </div>
+        {twoFactorError && (
+          <p role="alert" className="mt-2 text-[13px] font-semibold text-coral-text">
+            {twoFactorError}
+          </p>
+        )}
+        {spectrumConnected === false && (
+          <p className="mt-3 text-[12.5px] font-medium leading-[1.4] text-muted">
+            Photon is not connected. Copy{" "}
+            <a href="https://app.photon.codes" target="_blank" rel="noreferrer" className="font-bold text-brand hover:underline">
+              SPECTRUM_PROJECT_ID
+            </a>{" "}
+            and SPECTRUM_PROJECT_SECRET into <span className="font-semibold text-ink">backend/.env</span>, then restart
+            the server.
+          </p>
+        )}
+        {spectrumConnected === true && (
+          <p className="mt-3 text-[12.5px] font-medium text-brand">Photon Spectrum is connected. Codes go out over iMessage.</p>
+        )}
       </section>
 
       <section className="border-t border-line pt-5">

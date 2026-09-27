@@ -16,7 +16,9 @@ import {
   ChevronDown,
 } from "lucide-react";
 
-import { useAuth } from "@/lib/auth";
+import { useAuth, type AuthChallenge } from "@/lib/auth";
+import { ResetPasswordForm } from "./ResetPasswordForm";
+import { TwoFactorForm } from "./TwoFactorForm";
 
 const OTHER_OPTION = "Other";
 
@@ -41,6 +43,8 @@ export default function AuthPage() {
   const router = useRouter();
   const { status, signUp, signIn } = useAuth();
   const [isSignUp, setIsSignUp] = useState(true);
+  const [isReset, setIsReset] = useState(false);
+  const [twoFactor, setTwoFactor] = useState<AuthChallenge | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [college, setCollege] = useState("");
   const [isCollegeOpen, setIsCollegeOpen] = useState(false);
@@ -70,7 +74,12 @@ export default function AuthPage() {
         const school = college === OTHER_OPTION ? otherCollege.trim() : college.trim();
         await signUp({ name, email, phone, password, college: school });
       } else {
-        await signIn(identifier, password);
+        const result = await signIn(identifier, password);
+        if (result.requiresSecondFactor && result.challenge) {
+          setTwoFactor(result.challenge);
+          setPending(false);
+          return;
+        }
       }
       router.replace("/");
     } catch (cause) {
@@ -167,15 +176,43 @@ export default function AuthPage() {
           {/* Header */}
           <div className="mb-10">
             <h3 className="text-3xl font-bold mb-2">
-              {isSignUp ? "Create your account" : "Welcome back"}
+              {twoFactor
+                ? "Two-step verification"
+                : isReset
+                  ? "Reset your password"
+                  : isSignUp
+                    ? "Create your account"
+                    : "Welcome back"}
             </h3>
             <p className="text-slate-500">
-              {isSignUp
-                ? "Join and have fun with your campus community!"
-                : "Log in to see what's happening on campus."}
+              {twoFactor
+                ? "Photon sends a code over iMessage so only you can finish signing in."
+                : isReset
+                  ? "Photon iMessages a reset code to the phone number on your account."
+                  : isSignUp
+                    ? "Join and have fun with your campus community!"
+                    : "Log in to see what's happening on campus."}
             </p>
           </div>
 
+          {twoFactor ? (
+            <TwoFactorForm
+              challenge={twoFactor}
+              onBack={() => {
+                setTwoFactor(null);
+                setError(null);
+              }}
+            />
+          ) : isReset ? (
+            <ResetPasswordForm
+              initialPhone={identifier}
+              onBack={() => {
+                setIsReset(false);
+                setIsSignUp(false);
+                setError(null);
+              }}
+            />
+          ) : (
           <form className="space-y-4" onSubmit={submit}>
             <AnimatePresence mode="wait">
               {isSignUp ? (
@@ -405,6 +442,10 @@ export default function AuthPage() {
                       </label>
                       <button
                         type="button"
+                        onClick={() => {
+                          setIsReset(true);
+                          setError(null);
+                        }}
                         className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline transition-colors"
                       >
                         Forgot password?
@@ -464,8 +505,9 @@ export default function AuthPage() {
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </button>
           </form>
+          )}
 
-          {/* Toggle Button */}
+          {!isReset && !twoFactor && (
           <div className="mt-8 text-center">
             <button
               onClick={() => {
@@ -490,6 +532,7 @@ export default function AuthPage() {
               )}
             </button>
           </div>
+          )}
         </motion.div>
       </div>
     </div>

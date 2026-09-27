@@ -25,7 +25,8 @@ App guide (use this when they ask how something works):
 - Directions only appear after they tap Directions (Apple Maps or Google Maps).
   Opening an event or tapping I'm Going does not open directions.
 - Saved is the sidebar bookmark list. Profile (avatar) has Going, Hosted, Attended.
-  Settings: account info, change password, profile privacy.
+  Settings: account info, change password, two-step verification toggle, profile privacy.
+- Forgot password always iMessages a Photon code. Two-step sign-in is optional in Settings.
 - Categories live in the map All Categories dropdown. Date filter is Today or Any day.
 - The header search finds events, including rejected ones.
 
