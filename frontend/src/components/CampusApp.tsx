@@ -192,12 +192,26 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
       <TopNavbar
         onOpenSidebar={() => setSidebarOpen(true)}
         onAskGemini={openGemini}
+        events={state.events}
         query={state.query}
         onQueryChange={state.setQuery}
         results={state.visibleEvents}
         onSelectResult={(event) => {
           state.selectEvent(event.id);
           mapRef.current?.centerOn({ x: event.mapX, y: event.mapY });
+        }}
+        onNotificationAction={(action) => {
+          if (action === "freeFood") {
+            state.setSidebarFilter("Free Food");
+            state.setMapPill("freeFood");
+            state.setCategoryFilter("Free Food");
+            state.setDateFilter("any");
+            return;
+          }
+          state.setSidebarFilter("all");
+          state.setMapPill("trending");
+          state.setCategoryFilter("all");
+          state.setDateFilter("today");
         }}
       />
 

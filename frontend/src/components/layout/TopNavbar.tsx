@@ -3,10 +3,11 @@
 import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Bell, ChevronDown, Crown, LogOut, Menu, Search, X } from "lucide-react";
+import { ChevronDown, Crown, LogOut, Menu, Search, X } from "lucide-react";
 
 import { GeminiSparkle } from "@/components/gemini/GeminiSparkle";
 import { CategoryGlyph } from "@/components/icons/CategoryIcons";
+import { NotificationMenu, type NotificationAction } from "@/components/layout/NotificationMenu";
 import { useAuth } from "@/lib/auth";
 import type { CampusEvent } from "@/types/event";
 
@@ -21,13 +22,21 @@ interface SearchProps {
 interface TopNavbarProps extends SearchProps {
   onOpenSidebar: () => void;
   onAskGemini: () => void;
+  events: CampusEvent[];
+  onNotificationAction: (action: NotificationAction) => void;
 }
 
 /**
  * Fixed-height application header: brand block, local event search and the
  * account cluster. Search only looks at events already in the browser.
  */
-export function TopNavbar({ onOpenSidebar, onAskGemini, ...search }: TopNavbarProps) {
+export function TopNavbar({
+  onOpenSidebar,
+  onAskGemini,
+  events,
+  onNotificationAction,
+  ...search
+}: TopNavbarProps) {
   return (
     <header className="z-30 flex h-[72px] shrink-0 items-center border-b border-line bg-panel">
       <div className="flex w-[196px] shrink-0 items-center gap-2 pl-4 tablet:w-[236px] tablet:gap-2.5 tablet:pl-5 desktop:w-[276px]">
@@ -61,7 +70,12 @@ export function TopNavbar({ onOpenSidebar, onAskGemini, ...search }: TopNavbarPr
         <SearchField {...search} />
       </div>
 
-      <AccountCluster onAskGemini={onAskGemini} />
+      <AccountCluster
+        onAskGemini={onAskGemini}
+        events={events}
+        onSelectEvent={search.onSelectResult}
+        onNotificationAction={onNotificationAction}
+      />
     </header>
   );
 }
@@ -181,7 +195,17 @@ function SearchField({ query, onQueryChange, results, onSelectResult }: SearchPr
   );
 }
 
-function AccountCluster({ onAskGemini }: { onAskGemini: () => void }) {
+function AccountCluster({
+  onAskGemini,
+  events,
+  onSelectEvent,
+  onNotificationAction,
+}: {
+  onAskGemini: () => void;
+  events: CampusEvent[];
+  onSelectEvent: (event: CampusEvent) => void;
+  onNotificationAction: (action: NotificationAction) => void;
+}) {
   return (
     <div className="flex shrink-0 items-center gap-2 pr-4 tablet:gap-3.5 tablet:pr-[25px]">
       <motion.button
@@ -197,20 +221,7 @@ function AccountCluster({ onAskGemini }: { onAskGemini: () => void }) {
         <span className="text-[14px] font-bold">Ask Gemini</span>
       </motion.button>
 
-      <motion.button
-        type="button"
-        aria-label="Notifications, 1 unread"
-        whileHover={{ y: -1 }}
-        whileTap={{ scale: 0.94 }}
-        transition={{ duration: 0.14, ease: "easeOut" }}
-        className="relative grid h-10 w-10 place-items-center rounded-full text-brand transition-colors duration-150 hover:bg-brand-tint"
-      >
-        <Bell size={21} strokeWidth={2.1} />
-        <span
-          aria-hidden
-          className="absolute right-[9px] top-[8px] h-[9px] w-[9px] rounded-full bg-[#F5453A] ring-2 ring-panel"
-        />
-      </motion.button>
+      <NotificationMenu events={events} onSelectEvent={onSelectEvent} onAction={onNotificationAction} />
 
       <span aria-hidden className="hidden h-[26px] w-px bg-line-strong tablet:block" />
 

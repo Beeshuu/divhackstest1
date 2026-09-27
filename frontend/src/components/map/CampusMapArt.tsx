@@ -1,71 +1,194 @@
+import { MAP_ART, PLAN } from "@/lib/geo";
+
 /**
- * Static, locally drawn illustration that stands in for the interactive campus
- * map during Phase 1. Everything is plain SVG — no tiles, no network requests.
- *
- * Phase 2 swaps this whole file out for a Mapbox GL canvas; nothing outside
- * `CampusMapPlaceholder` should import it.
+ * Illustrated Morningside Heights campus — same soft buildings, lawns and
+ * trees as the original map, laid out on the real street grid (110th–122nd,
+ * Riverside Drive to Morningside Drive) so pins match Google and Apple Maps.
  */
 
-const VIEW_W = 1000;
-const VIEW_H = 936;
+const VIEW_W = MAP_ART.width;
+const VIEW_H = MAP_ART.height;
+
+const X = {
+  riverside: pctX(PLAN.x.riverside),
+  claremont: pctX(PLAN.x.claremont),
+  broadway: pctX(PLAN.x.broadway),
+  amsterdam: pctX(PLAN.x.amsterdam),
+  morningside: pctX(PLAN.x.morningside),
+};
+
+const Y = {
+  122: pctY(PLAN.y[122]),
+  121: pctY(PLAN.y[121]),
+  120: pctY(PLAN.y[120]),
+  119: pctY(PLAN.y[119]),
+  118: pctY(PLAN.y[118]),
+  116: pctY(PLAN.y[116]),
+  115: pctY(PLAN.y[115]),
+  114: pctY(PLAN.y[114]),
+  113: pctY(PLAN.y[113]),
+  112: pctY(PLAN.y[112]),
+  111: pctY(PLAN.y[111]),
+  110: pctY(PLAN.y[110]),
+};
+
+/** Half-widths — thick enough to read as streets, like the original drawing. */
+const AVE = 16;
+const BRD = 20;
+const ST = 13;
+
+function pctX(pct: number) {
+  return (pct / 100) * VIEW_W;
+}
+
+function pctY(pct: number) {
+  return (pct / 100) * VIEW_H;
+}
 
 interface Block {
   x: number;
   y: number;
   w: number;
   h: number;
-  /** Softer fill for secondary / off-campus blocks. */
   alt?: boolean;
+  rx?: number;
 }
 
-/** Campus buildings, laid out to leave the reference label positions readable. */
+function inset(west: number, east: number, north: number, south: number, pad = 10, alt = false): Block {
+  return {
+    x: west + pad,
+    y: north + pad,
+    w: Math.max(12, east - west - pad * 2),
+    h: Math.max(12, south - north - pad * 2),
+    alt,
+  };
+}
+
+function slice(block: Block, left: number, top: number, width: number, height: number, alt = block.alt): Block {
+  return {
+    x: block.x + block.w * left,
+    y: block.y + block.h * top,
+    w: block.w * width,
+    h: block.h * height,
+    alt,
+  };
+}
+
+const rE = X.riverside + AVE;
+const cW = X.claremont - AVE;
+const cE = X.claremont + AVE;
+const bW = X.broadway - BRD;
+const bE = X.broadway + BRD;
+const aW = X.amsterdam - AVE;
+const aE = X.amsterdam + AVE;
+const mW = X.morningside - AVE;
+
+const southOf = (n: keyof typeof Y) => Y[n] + ST;
+const northOf = (n: keyof typeof Y) => Y[n] - ST;
+
+const main = inset(bE, aW, southOf(120), northOf(118));
+const lowQuad = inset(bE, aW, southOf(118), northOf(116));
+const southRow = inset(bE, aW, southOf(116), northOf(115));
+const butlerRow = inset(bE, aW, southOf(115), northOf(114));
+const barnard = inset(cE, bW, southOf(120), northOf(116));
+const barnardWest = inset(rE, cW, southOf(119), northOf(116));
+const eastMid = inset(aE, mW, southOf(118), northOf(116));
+
 const CAMPUS_BUILDINGS: Block[] = [
-  { x: 166, y: 122, w: 190, h: 100 },
-  { x: 396, y: 122, w: 228, h: 100 }, // Lerner Hall
-  { x: 660, y: 122, w: 206, h: 100 },
-  { x: 166, y: 246, w: 210, h: 58 }, // Schermerhorn Hall (north wing)
-  { x: 664, y: 244, w: 202, h: 88 }, // Uris Hall
-  { x: 164, y: 336, w: 216, h: 116 },
-  { x: 386, y: 342, w: 248, h: 70 }, // Butler Library
-  { x: 672, y: 348, w: 196, h: 112 },
-  { x: 150, y: 574, w: 200, h: 130 }, // Hamilton Hall
-  { x: 612, y: 574, w: 256, h: 134 }, // Dodge Fitness Center
-  { x: 154, y: 714, w: 194, h: 74, alt: true },
-  { x: 686, y: 718, w: 182, h: 70, alt: true },
+  { x: X.riverside - 70, y: 16, w: 56, h: 46, alt: true, rx: 18 },
+  { x: X.riverside - 66, y: Y[122] + 16, w: 50, h: 78, alt: true },
+
+  slice(inset(bE, aW, southOf(122), northOf(121)), 0.03, 0.12, 0.3, 0.76, true),
+  slice(inset(bE, aW, southOf(122), northOf(121)), 0.37, 0.1, 0.28, 0.8),
+  slice(inset(bE, aW, southOf(122), northOf(121)), 0.69, 0.14, 0.28, 0.74, true),
+  inset(bE, aW, southOf(121), northOf(120)),
+
+  slice(main, 0.03, 0.06, 0.3, 0.4),
+  slice(main, 0.37, 0.04, 0.3, 0.42),
+  slice(main, 0.71, 0.06, 0.26, 0.4),
+  slice(main, 0.03, 0.54, 0.22, 0.4),
+  slice(main, 0.29, 0.52, 0.2, 0.42),
+  slice(main, 0.53, 0.5, 0.18, 0.44),
+  slice(main, 0.75, 0.52, 0.22, 0.42),
+
+  slice(lowQuad, 0.03, 0.08, 0.2, 0.36),
+  slice(lowQuad, 0.26, 0.16, 0.14, 0.28),
+  { ...slice(lowQuad, 0.43, 0.08, 0.28, 0.44), rx: 10 },
+  slice(lowQuad, 0.75, 0.12, 0.22, 0.34),
+  slice(lowQuad, 0.03, 0.56, 0.22, 0.38),
+  slice(lowQuad, 0.76, 0.56, 0.21, 0.38),
+
+  slice(southRow, 0.03, 0.1, 0.2, 0.8),
+  slice(southRow, 0.26, 0.08, 0.18, 0.84),
+  slice(southRow, 0.78, 0.1, 0.19, 0.8),
+  slice(butlerRow, 0.03, 0.1, 0.22, 0.8),
+  { ...slice(butlerRow, 0.29, 0.06, 0.4, 0.88), rx: 7 },
+  slice(butlerRow, 0.73, 0.1, 0.24, 0.8),
+
+  inset(bE, aW, southOf(114), northOf(113)),
+  inset(bE, aW, southOf(113), northOf(112), 10, true),
+  slice(inset(bE, aW, southOf(112), northOf(111), 10, true), 0.03, 0.12, 0.45, 0.76, true),
+  slice(inset(bE, aW, southOf(112), northOf(111), 10, true), 0.52, 0.12, 0.45, 0.76, true),
+  inset(bE, aW, southOf(111), northOf(110), 10, true),
+
+  slice(barnardWest, 0.06, 0.04, 0.88, 0.28),
+  slice(barnardWest, 0.06, 0.38, 0.88, 0.26),
+  slice(barnardWest, 0.06, 0.7, 0.88, 0.26),
+  slice(barnard, 0.08, 0.05, 0.84, 0.2),
+  slice(barnard, 0.1, 0.3, 0.8, 0.22),
+  slice(barnard, 0.08, 0.58, 0.4, 0.36),
+  slice(barnard, 0.52, 0.58, 0.4, 0.36),
+
+  inset(cE, bW, southOf(116), northOf(115), 10, true),
+  inset(cE, bW, southOf(115), northOf(114), 10, true),
+  inset(cE, bW, southOf(114), northOf(113), 10, true),
+  inset(cE, bW, southOf(113), northOf(112), 10, true),
+  inset(cE, bW, southOf(112), northOf(111), 10, true),
+
+  inset(cE, bW, southOf(122), northOf(121), 10, true),
+  inset(cE, bW, southOf(121), northOf(120)),
+  inset(rE, cW, southOf(121), northOf(120), 10, true),
+  inset(rE, cW, southOf(120), northOf(119), 10, true),
+
+  inset(aE, mW, southOf(122), northOf(121), 10, true),
+  inset(aE, mW, southOf(121), northOf(120), 10, true),
+  inset(aE, mW, southOf(120), northOf(119)),
+  inset(aE, mW, southOf(119), northOf(118)),
+  slice(eastMid, 0.06, 0.08, 0.56, 0.4),
+  slice(eastMid, 0.68, 0.12, 0.26, 0.36),
+  slice(eastMid, 0.08, 0.56, 0.5, 0.36),
+  inset(aE, mW, southOf(116), northOf(114), 10, true),
+  inset(aE, mW, southOf(114), northOf(113), 10, true),
 ];
 
-const OFFCAMPUS_BUILDINGS: Block[] = [
-  { x: 156, y: -70, w: 176, h: 128, alt: true },
-  { x: 372, y: -70, w: 188, h: 128, alt: true },
-  { x: 604, y: -70, w: 184, h: 128, alt: true },
-  { x: 830, y: -70, w: 196, h: 128, alt: true },
-  { x: -190, y: 134, w: 252, h: 148, alt: true },
-  { x: -190, y: 356, w: 252, h: 162, alt: true },
-  { x: -190, y: 596, w: 252, h: 182, alt: true },
-  { x: 952, y: 132, w: 244, h: 152, alt: true },
-  { x: 952, y: 328, w: 244, h: 186, alt: true },
-  { x: 952, y: 560, w: 244, h: 224, alt: true },
-  { x: 150, y: 880, w: 214, h: 164, alt: true },
-  { x: 418, y: 880, w: 214, h: 164, alt: true },
-  { x: 686, y: 880, w: 214, h: 164, alt: true },
-];
+const CATHEDRAL: Block = {
+  ...inset(aE + 14, mW - 4, southOf(113) + 4, northOf(110) - 8),
+  rx: 12,
+};
 
 const LAWNS: Block[] = [
-  { x: 378, y: 664, w: 286, h: 108 }, // South Field
-  { x: 186, y: 476, w: 152, h: 70 },
-  { x: 706, y: 492, w: 140, h: 58 },
+  { x: 0, y: 0, w: X.riverside - 8, h: VIEW_H },
+  { x: X.morningside + 10, y: 0, w: VIEW_W - X.morningside - 10, h: VIEW_H },
+  {
+    x: southRow.x + southRow.w * 0.46,
+    y: southRow.y + 6,
+    w: southRow.w * 0.3,
+    h: southRow.h - 12,
+  },
+  {
+    x: lowQuad.x + lowQuad.w * 0.42,
+    y: lowQuad.y + lowQuad.h * 0.56,
+    w: lowQuad.w * 0.3,
+    h: lowQuad.h * 0.36,
+  },
+  { x: CATHEDRAL.x - 14, y: CATHEDRAL.y - 16, w: CATHEDRAL.w + 28, h: CATHEDRAL.h + 32 },
 ];
 
-/** Paved pedestrian corridors between building rows. */
 const WALKS: Block[] = [
-  { x: 148, y: 222, w: 722, h: 26 },
-  { x: 148, y: 456, w: 722, h: 22 },
-  { x: 148, y: 562, w: 722, h: 20 },
-  { x: 376, y: 112, w: 22, h: 680 },
-  { x: 634, y: 112, w: 22, h: 680 },
+  { x: bE, y: Y[116] - 8, w: aW - bE, h: 16 },
+  { x: (X.broadway + X.amsterdam) / 2 - 8, y: Y[118] + 6, w: 16, h: Y[114] - Y[118] - 12 },
 ];
 
-/** Deterministic pseudo-random tree placement (stable across SSR + client). */
 function buildTrees() {
   let seed = 20260410;
   const rand = () => {
@@ -73,44 +196,32 @@ function buildTrees() {
     return seed / 0x7fffffff;
   };
 
-  // Tree rows hug sidewalks and the corridors between buildings, so the
-  // building footprints stay legible — as they do in the reference.
   const lanes: Array<[number, number, number, number]> = [
-    [-180, 58, 1180, 58],
-    [-180, 126, 1180, 126],
-    [-180, 786, 1180, 786],
-    [-180, 852, 1180, 852],
-    [72, 130, 72, 782],
-    [154, 130, 154, 782],
-    [864, 130, 864, 782],
-    [944, 130, 944, 782],
-    [170, 234, 862, 234],
-    [170, 466, 862, 466],
-    [170, 572, 862, 572],
-    [386, 240, 386, 566],
-    [645, 240, 645, 566],
-    [386, 600, 386, 780],
-    [645, 600, 645, 780],
-    [196, 306, 350, 306],
-    [690, 336, 850, 336],
-    [200, 460, 340, 460],
-    [700, 470, 850, 470],
-    [400, 640, 640, 640],
-    [400, 780, 640, 780],
+    [22, 30, 22, VIEW_H - 24],
+    [X.riverside - 26, 40, X.riverside - 26, VIEW_H - 28],
+    [X.morningside + 26, 36, X.morningside + 26, VIEW_H - 24],
+    [VIEW_W - 18, 28, VIEW_W - 18, VIEW_H - 22],
+    [X.broadway - 28, 50, X.broadway - 28, VIEW_H - 30],
+    [X.broadway + 28, 50, X.broadway + 28, VIEW_H - 30],
+    [X.amsterdam - 26, 50, X.amsterdam - 26, VIEW_H - 30],
+    [X.amsterdam + 26, 50, X.amsterdam + 26, VIEW_H - 30],
+    [X.broadway + 30, Y[116], X.amsterdam - 30, Y[116]],
+    [X.broadway + 36, southRow.y + southRow.h * 0.5, X.amsterdam - 90, southRow.y + southRow.h * 0.5],
+    [CATHEDRAL.x - 6, CATHEDRAL.y - 12, CATHEDRAL.x + CATHEDRAL.w + 6, CATHEDRAL.y - 12],
+    [CATHEDRAL.x - 6, CATHEDRAL.y + CATHEDRAL.h + 8, CATHEDRAL.x + CATHEDRAL.w + 6, CATHEDRAL.y + CATHEDRAL.h + 8],
   ];
 
   const trees: Array<{ x: number; y: number; r: number; tone: number }> = [];
   for (const [x0, y0, x1, y1] of lanes) {
     const len = Math.hypot(x1 - x0, y1 - y0);
-    const count = Math.round(len / 34);
+    const count = Math.round(len / 46);
     for (let i = 0; i < count; i++) {
-      // Leaving gaps in each row reads as planted clusters rather than a chain.
-      if (rand() < 0.2) continue;
+      if (rand() < 0.32) continue;
       const t = (i + 0.5) / count;
       trees.push({
-        x: x0 + (x1 - x0) * t + (rand() - 0.5) * 22,
-        y: y0 + (y1 - y0) * t + (rand() - 0.5) * 22,
-        r: 7 + rand() * 7,
+        x: x0 + (x1 - x0) * t + (rand() - 0.5) * 14,
+        y: y0 + (y1 - y0) * t + (rand() - 0.5) * 14,
+        r: 5.2 + rand() * 4.2,
         tone: rand(),
       });
     }
@@ -124,11 +235,10 @@ export function CampusMapArt() {
   return (
     <svg
       viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
-      preserveAspectRatio="xMidYMid slice"
-      overflow="visible"
-      className="absolute inset-0 h-full w-full"
+      preserveAspectRatio="none"
+      className="pointer-events-none block h-full w-full"
       role="img"
-      aria-label="Stylised map of the Columbia University Morningside campus"
+      aria-label="Illustrated map of Columbia University, Barnard College, and Teachers College in Morningside Heights, from 110th to 122nd Street between Riverside Drive and Morningside Drive."
     >
       <defs>
         <linearGradient id="cc-roof" x1="0" y1="0" x2="0.4" y2="1">
@@ -151,88 +261,83 @@ export function CampusMapArt() {
 
       <rect width={VIEW_W} height={VIEW_H} fill="var(--color-map-ground)" />
 
-      {/* The whole grid is tilted slightly, like the reference map view. */}
-      <g transform="rotate(-5 500 468)">
-        <rect x={148} y={112} width={722} height={680} fill="var(--color-map-walk)" />
+      {LAWNS.map((lawn, i) => (
+        <rect
+          key={`lawn-${i}`}
+          x={lawn.x}
+          y={lawn.y}
+          width={lawn.w}
+          height={lawn.h}
+          rx={i < 2 ? 0 : 8}
+          fill="var(--color-map-lawn)"
+          opacity={i < 2 ? 0.9 : 1}
+        />
+      ))}
 
-        <Street x={-220} y={70} w={1440} h={42} />
-        <Street x={-220} y={792} w={1440} h={42} />
-        <Street x={86} y={-220} w={54} h={1380} vertical />
-        <Street x={878} y={-220} w={54} h={1380} vertical />
-        <Street x={-220} y={296} w={366} h={32} />
-        <Street x={-220} y={532} w={366} h={32} />
+      <Street x={-40} y={Y[122] - ST} w={VIEW_W + 80} h={ST * 2} />
+      <Street x={-40} y={Y[121] - ST} w={VIEW_W + 80} h={ST * 2} />
+      <Street x={-40} y={Y[120] - ST} w={VIEW_W + 80} h={ST * 2} />
+      <Street x={-40} y={Y[119] - ST} w={VIEW_W + 80} h={ST * 2} />
+      <Street x={-40} y={Y[118] - ST} w={VIEW_W + 80} h={ST * 2} />
+      <Street x={-40} y={Y[116] - ST} w={VIEW_W + 80} h={ST * 2} />
+      <Street x={-40} y={Y[115] - ST} w={VIEW_W + 80} h={ST * 2} />
+      <Street x={-40} y={Y[114] - ST} w={VIEW_W + 80} h={ST * 2} />
+      <Street x={-40} y={Y[113] - ST} w={VIEW_W + 80} h={ST * 2} />
+      <Street x={-40} y={Y[112] - ST} w={VIEW_W + 80} h={ST * 2} />
+      <Street x={-40} y={Y[111] - ST} w={VIEW_W + 80} h={ST * 2} />
+      <Street x={-40} y={Y[110] - ST} w={VIEW_W + 80} h={ST * 2} />
 
-        {WALKS.map((walk, i) => (
+      <Street x={X.riverside - AVE} y={-40} w={AVE * 2} h={VIEW_H + 80} vertical />
+      <Street x={X.claremont - AVE} y={-40} w={AVE * 2} h={VIEW_H + 80} vertical />
+      <Street x={X.broadway - BRD} y={-40} w={BRD * 2} h={VIEW_H + 80} vertical />
+      <Street x={X.amsterdam - AVE} y={-40} w={AVE * 2} h={VIEW_H + 80} vertical />
+      <Street x={X.morningside - AVE} y={-40} w={AVE * 2} h={VIEW_H + 80} vertical />
+
+      {WALKS.map((walk, i) => (
+        <rect key={`walk-${i}`} x={walk.x} y={walk.y} width={walk.w} height={walk.h} fill="#F4F1EA" />
+      ))}
+
+      <g opacity={0.55}>
+        {[0, 1, 2, 3, 4].map((i) => (
           <rect
-            key={`walk-${i}`}
-            x={walk.x}
-            y={walk.y}
-            width={walk.w}
-            height={walk.h}
-            fill="#F4F1EA"
+            key={`step-${i}`}
+            x={lowQuad.x + lowQuad.w * 0.43}
+            y={lowQuad.y + lowQuad.h * 0.56 + i * 9}
+            width={lowQuad.w * 0.28}
+            height={4}
+            rx={2}
+            fill="#DBD6CC"
           />
-        ))}
-
-        {LAWNS.map((lawn, i) => (
-          <rect
-            key={`lawn-${i}`}
-            x={lawn.x}
-            y={lawn.y}
-            width={lawn.w}
-            height={lawn.h}
-            rx={8}
-            fill="var(--color-map-lawn)"
-          />
-        ))}
-
-        {/* Low Steps terracing */}
-        <g opacity={0.55}>
-          {[0, 1, 2, 3, 4].map((i) => (
-            <rect
-              key={`step-${i}`}
-              x={402}
-              y={492 + i * 12}
-              width={228}
-              height={5}
-              rx={2.5}
-              fill="#DBD6CC"
-            />
-          ))}
-        </g>
-
-        {/* Alma Mater plaza */}
-        <circle cx={476} cy={607} r={20} fill="#EFEBE3" stroke="#DDD8CF" strokeWidth={2} />
-
-        {[...OFFCAMPUS_BUILDINGS, ...CAMPUS_BUILDINGS].map((b, i) => (
-          <Building key={`b-${i}`} {...b} />
-        ))}
-
-        {TREES.map((t, i) => (
-          <g key={`t-${i}`}>
-            <ellipse
-              cx={t.x + 1.5}
-              cy={t.y + t.r * 0.6}
-              rx={t.r * 0.85}
-              ry={t.r * 0.4}
-              fill="#0F2547"
-              opacity={0.055}
-            />
-            <circle
-              cx={t.x}
-              cy={t.y}
-              r={t.r}
-              fill={t.tone > 0.55 ? "url(#cc-tree-cool)" : "url(#cc-tree)"}
-            />
-            <circle
-              cx={t.x - t.r * 0.26}
-              cy={t.y - t.r * 0.28}
-              r={t.r * 0.44}
-              fill="#C2DBAC"
-              opacity={0.5}
-            />
-          </g>
         ))}
       </g>
+      <circle
+        cx={lowQuad.x + lowQuad.w * 0.57}
+        cy={lowQuad.y + lowQuad.h * 0.94}
+        r={15}
+        fill="#EFEBE3"
+        stroke="#DDD8CF"
+        strokeWidth={2}
+      />
+
+      {TREES.map((t, i) => (
+        <g key={`t-${i}`}>
+          <ellipse
+            cx={t.x + 1.2}
+            cy={t.y + t.r * 0.6}
+            rx={t.r * 0.85}
+            ry={t.r * 0.4}
+            fill="#0F2547"
+            opacity={0.055}
+          />
+          <circle cx={t.x} cy={t.y} r={t.r} fill={t.tone > 0.55 ? "url(#cc-tree-cool)" : "url(#cc-tree)"} />
+          <circle cx={t.x - t.r * 0.26} cy={t.y - t.r * 0.28} r={t.r * 0.44} fill="#C2DBAC" opacity={0.5} />
+        </g>
+      ))}
+
+      {CAMPUS_BUILDINGS.map((b, i) => (
+        <Building key={`b-${i}`} {...b} />
+      ))}
+      <Building {...CATHEDRAL} />
     </svg>
   );
 }
@@ -258,7 +363,7 @@ function Street({ x, y, w, h, vertical = false }: Block & { vertical?: boolean }
   );
 }
 
-function Building({ x, y, w, h, alt = false }: Block) {
+function Building({ x, y, w, h, alt = false, rx = 4 }: Block) {
   const cols = Math.max(2, Math.round(w / 30));
   const rows = Math.max(1, Math.round(h / 34));
   const pad = 10;
@@ -267,13 +372,13 @@ function Building({ x, y, w, h, alt = false }: Block) {
 
   return (
     <g>
-      <rect x={x + 4} y={y + 5} width={w} height={h} rx={4} fill="#0F2547" opacity={0.1} />
+      <rect x={x + 4} y={y + 5} width={w} height={h} rx={rx} fill="#0F2547" opacity={0.1} />
       <rect
         x={x}
         y={y}
         width={w}
         height={h}
-        rx={4}
+        rx={rx}
         fill={alt ? "url(#cc-roof-alt)" : "url(#cc-roof)"}
         stroke="var(--color-map-building-edge)"
         strokeWidth={1.6}
@@ -281,9 +386,9 @@ function Building({ x, y, w, h, alt = false }: Block) {
       <rect
         x={x + 7}
         y={y + 7}
-        width={w - 14}
-        height={h - 14}
-        rx={3}
+        width={Math.max(0, w - 14)}
+        height={Math.max(0, h - 14)}
+        rx={Math.max(2, rx - 1)}
         fill={alt ? "#CBD4E3" : "#D2DCEA"}
       />
       <g opacity={alt ? 0.55 : 0.68}>
