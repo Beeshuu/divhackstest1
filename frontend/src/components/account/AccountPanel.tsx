@@ -20,29 +20,13 @@ import {
 
 import { CategoryGlyph } from "@/components/icons/CategoryIcons";
 import { useAuth } from "@/lib/auth";
+import { COLLEGES } from "@/lib/colleges";
 import { cn, initialsOf } from "@/lib/utils";
 import type { EventHistory } from "@/lib/use-event-history";
 import type { CampusEvent } from "@/types/event";
 
 export type AccountView = "profile" | "settings";
 export type ProfileTab = "going" | "hosted" | "attended";
-
-const COLLEGES = [
-  "Columbia University",
-  "Barnard College",
-  "New York University",
-  "The New School",
-  "Fordham University",
-  "Pace University",
-  "Cooper Union",
-  "CUNY — Baruch College",
-  "CUNY — City College of New York",
-  "CUNY — Hunter College",
-  "CUNY — Brooklyn College",
-  "CUNY — Queens College",
-  "St. John's University",
-  "Stevens Institute of Technology",
-];
 
 const INPUT =
   "w-full rounded-[12px] border border-line bg-field px-3.5 text-[14.5px] font-medium text-ink placeholder:font-normal placeholder:text-faint outline-none transition-[background-color,border-color,box-shadow] duration-150 focus:border-brand/40 focus:bg-white focus:ring-4 focus:ring-brand/10";
@@ -399,7 +383,9 @@ function SettingsView() {
     }
   };
 
-  const collegeOptions = COLLEGES.includes(college) ? COLLEGES : [college, ...COLLEGES].filter(Boolean);
+  const collegeOptions = (COLLEGES as readonly string[]).includes(college)
+    ? COLLEGES
+    : [college, ...COLLEGES].filter(Boolean);
 
   return (
     <div className="space-y-6">

@@ -134,10 +134,27 @@ for (const [column, definition] of Object.entries(EVENT_COLUMN_ADDITIONS)) {
 const app = express();
 const port = Number(process.env.PORT) || 3000;
 const frontendPort = Number(process.env.FRONTEND_PORT) || 3001;
-const campus = { south: 40.8036, west: -73.9669, north: 40.8168, east: -73.9505 };
+const CAMPUSES = [
+  { south: 40.8036, west: -73.9669, north: 40.8168, east: -73.9505 },
+  { south: 40.724, west: -74.004, north: 40.7353, east: -73.9904 },
+  { south: 40.732, west: -74.0, north: 40.74, east: -73.9874 },
+  { south: 40.8562, west: -73.8942, north: 40.865, east: -73.8802 },
+  { south: 40.7064, west: -74.0104, north: 40.715, east: -74.0 },
+  { south: 40.7238, west: -73.9958, north: 40.7322, east: -73.987 },
+  { south: 40.7366, west: -73.9916, north: 40.7446, east: -73.9788 },
+  { south: 40.8154, west: -73.9566, north: 40.824, east: -73.944 },
+  { south: 40.7642, west: -73.9702, north: 40.7724, east: -73.959 },
+  { south: 40.6266, west: -73.9586, north: 40.6346, east: -73.9462 },
+  { south: 40.733, west: -73.8252, north: 40.7406, east: -73.815 },
+  { south: 40.7176, west: -73.8014, north: 40.7264, east: -73.7896 },
+  { south: 40.7406, west: -74.0306, north: 40.7484, east: -74.021 },
+];
 
 function isOnCampus(latitude, longitude) {
-  return latitude >= campus.south && latitude <= campus.north && longitude >= campus.west && longitude <= campus.east;
+  return CAMPUSES.some(
+    (campus) =>
+      latitude >= campus.south && latitude <= campus.north && longitude >= campus.west && longitude <= campus.east,
+  );
 }
 
 const EVENT_CATEGORIES = new Set(['Free Food', 'Social', 'Academic', 'Career', 'Sports', 'Entertainment']);
@@ -736,7 +753,7 @@ app.post('/api/events', requireUser, (request, response) => {
     return response.status(400).json({ error: 'Choose one of the Campus Connect categories.' });
   }
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || !isOnCampus(latitude, longitude)) {
-    return response.status(400).json({ error: 'Pick a spot inside the Columbia campus boundary.' });
+    return response.status(400).json({ error: 'Pick a spot inside the campus map.' });
   }
   if (Number.isNaN(starts.valueOf()) || Number.isNaN(closes.valueOf()) || closes <= starts) {
     return response.status(400).json({ error: 'The end time has to come after the start time.' });

@@ -11,6 +11,7 @@ import {
   timeStatusFromDates,
 } from "./utils";
 import { communityEventFromApi } from "./community-events";
+import { campusMapToGeo, eventCampusId, sharesCampusMap, type CampusId } from "./campuses";
 import { FEATURED_EVENT_ID, MOCK_EVENTS } from "@/data/mock-events";
 import { isUserLedEvent, USER_LED_EVENTS } from "@/data/user-led-events";
 import type {
@@ -74,7 +75,12 @@ function readIdSet(key: string): Set<string> {
   }
 }
 
-export function useCampusState(initialEventId?: string, userId?: number, userName?: string) {
+export function useCampusState(
+  initialEventId?: string,
+  userId?: number,
+  userName?: string,
+  campusId: CampusId = "columbia",
+) {
   const [liveEvents, setLiveEvents] = useState<CampusEvent[]>([]);
   const [communityEvents, setCommunityEvents] = useState<CampusEvent[]>([]);
   const [liveStatus, setLiveStatus] = useState<"idle" | "ready" | "error">("idle");
@@ -160,11 +166,12 @@ export function useCampusState(initialEventId?: string, userId?: number, userNam
         if (sidebarFilter === "remote") return event.locationKind === "remote";
         if (sidebarFilter === "userLed") return isUserLedEvent(event, userName);
         if (event.locationKind === "tbd" || event.locationKind === "remote") return false;
+        if (!sharesCampusMap(eventCampusId(event), campusId)) return false;
         if (categoryFilter !== "all" && event.category !== categoryFilter) return false;
         if (dateFilter === "today" && !isEventToday(event)) return false;
         return true;
       }),
-    [events, query, searching, rejected, sidebarFilter, saved, categoryFilter, dateFilter, userName],
+    [events, query, searching, rejected, sidebarFilter, saved, categoryFilter, dateFilter, userName, campusId],
   );
 
   const searchResults = useMemo(
@@ -239,7 +246,7 @@ export function useCampusState(initialEventId?: string, userId?: number, userNam
   }, []);
 
   const createEvent = useCallback(
-    (draft: EventDraft, hostName = "You"): CampusEvent | null => {
+    (draft: EventDraft, hostName = "You", eventCampusIdValue: CampusId = campusId): CampusEvent | null => {
       if (!draft.point) return null;
       const style = CATEGORY_STYLE[draft.category];
       const start = dateTodayAt(draft.startTime);
@@ -270,6 +277,9 @@ export function useCampusState(initialEventId?: string, userId?: number, userNam
         locationKind: "mapped",
         source: "user",
         hostedByMe: true,
+        campusId: eventCampusIdValue,
+        latitude: campusMapToGeo(draft.point, eventCampusIdValue).lat,
+        longitude: campusMapToGeo(draft.point, eventCampusIdValue).lng,
       };
       setCreatedEvents((prev) => [...prev, event]);
       setSelectedId(event.id);
@@ -277,7 +287,7 @@ export function useCampusState(initialEventId?: string, userId?: number, userNam
       syncUrl(event);
       return event;
     },
-    [],
+    [campusId],
   );
 
   const clearFilters = useCallback(() => {

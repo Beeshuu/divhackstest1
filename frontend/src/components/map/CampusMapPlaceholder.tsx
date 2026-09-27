@@ -5,10 +5,11 @@ import { motion, useMotionValueEvent } from "framer-motion";
 import { Crown } from "lucide-react";
 
 import { CampusMapArt } from "./CampusMapArt";
+import { IllustratedCampusArt } from "./IllustratedCampusArt";
 import { EventMarker, MapAnchor, MarkerPin } from "./EventMarker";
 import { MapControls } from "./MapControls";
 import { useMapView } from "./use-map-view";
-import { MAP_LABELS } from "@/lib/constants";
+import type { CampusDefinition } from "@/lib/campuses";
 import type { MapPoint } from "@/lib/geo";
 import { cn } from "@/lib/utils";
 import type { CampusEvent } from "@/types/event";
@@ -20,6 +21,7 @@ export interface MapViewHandle {
 }
 
 interface CampusMapPlaceholderProps {
+  campus: CampusDefinition;
   events: CampusEvent[];
   selectedEventId: string | null;
   onSelectEvent: (eventId: string) => void;
@@ -36,12 +38,13 @@ interface CampusMapPlaceholderProps {
 }
 
 /**
- * Pannable, zoomable campus plan of Morningside Heights.
+ * Pannable, zoomable campus plan for the signed-in student's college.
  *
  * The props mirror what a real Mapbox component needs, so Phase 2 can drop in
  * `CampusMap.tsx` behind the same interface without touching the page shell.
  */
 export function CampusMapPlaceholder({
+  campus,
   events,
   selectedEventId,
   onSelectEvent,
@@ -54,7 +57,8 @@ export function CampusMapPlaceholder({
   draftPin,
 }: CampusMapPlaceholderProps) {
   const { viewportRef, paneRef, pointerHandlers, x, y, scale, inverseScale, layer, homeScale, isDragging, zoomBy, centerOn, reset } =
-    useMapView(onPickPoint);
+    useMapView(onPickPoint, campus.spec.home);
+  const labels = campus.labels;
   const picking = Boolean(onPickPoint);
   const [showDetail, setShowDetail] = useState(false);
 
@@ -75,7 +79,7 @@ export function CampusMapPlaceholder({
         {...pointerHandlers}
         tabIndex={0}
         role="application"
-        aria-label="Campus map of Morningside Heights. Drag to pan, scroll or use plus and minus to zoom, arrow keys to move."
+        aria-label={`Campus map of ${campus.spec.name}. Drag to pan, scroll or use plus and minus to zoom, arrow keys to move.`}
         className={cn(
           "absolute inset-0 touch-none select-none outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/40",
           picking ? "cursor-crosshair" : isDragging ? "cursor-grabbing-black" : "cursor-grab-black",
@@ -85,9 +89,9 @@ export function CampusMapPlaceholder({
           className="absolute left-0 top-0 overflow-hidden"
           style={{ x, y, scale, width: layer.w, height: layer.h, transformOrigin: "0 0" }}
         >
-          <CampusMapArt />
+          {campus.spec.artKind === "columbia" ? <CampusMapArt /> : <IllustratedCampusArt campus={campus} />}
 
-          {MAP_LABELS.streets.map((street) =>
+          {labels.streets.map((street) =>
             street.minor && !showDetail ? null : (
               <MapAnchor key={street.label} x={street.x} y={street.y} inverseScale={inverseScale}>
                 <span
@@ -100,7 +104,7 @@ export function CampusMapPlaceholder({
             ),
           )}
 
-          {MAP_LABELS.buildings.map((building) =>
+          {labels.buildings.map((building) =>
             building.minor && !showDetail ? null : (
               <MapAnchor
                 key={`${building.label}-${building.x}-${building.y}`}
@@ -123,8 +127,8 @@ export function CampusMapPlaceholder({
             ),
           )}
 
-          {showDetail && (
-            <MapAnchor x={52.4} y={47.8} inverseScale={inverseScale}>
+          {showDetail && campus.spec.crown && (
+            <MapAnchor x={campus.spec.crown.x} y={campus.spec.crown.y} inverseScale={inverseScale}>
               <Crown
                 size={14}
                 strokeWidth={1.8}

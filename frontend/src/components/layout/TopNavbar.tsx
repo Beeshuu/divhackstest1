@@ -50,6 +50,7 @@ export function TopNavbar({
   photonEnabled,
   ...search
 }: TopNavbarProps) {
+  const { user } = useAuth();
   return (
     <header className="z-30 flex h-[72px] shrink-0 items-center border-b border-line bg-panel">
       <div className="flex w-[196px] shrink-0 items-center gap-2 pl-4 tablet:w-[236px] tablet:gap-2.5 tablet:pl-5 desktop:w-[276px]">
@@ -74,7 +75,7 @@ export function TopNavbar({
             Campus Connect
           </span>
           <span className="mt-[3px] block truncate text-[12.5px] font-medium text-muted">
-            Columbia University
+            {user?.college || "Campus Connect"}
           </span>
         </span>
       </div>

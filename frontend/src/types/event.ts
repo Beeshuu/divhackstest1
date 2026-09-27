@@ -71,6 +71,10 @@ export interface CampusEvent {
   source?: "university-life" | "user";
   /** True when the signed-in student posted this listing. */
   hostedByMe?: boolean;
+  /** Which illustrated campus this pin belongs on. Defaults to Columbia. */
+  campusId?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 /** Sidebar selection: a category, every event, or the user's saved events. */

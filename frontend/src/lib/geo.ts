@@ -52,7 +52,7 @@ export const PLAN = {
   },
 } as const;
 
-interface ControlPoint extends LatLng, MapPoint {}
+export interface ControlPoint extends LatLng, MapPoint {}
 
 /**
  * Google/Apple positions for the labelled crossings on the plan.
@@ -98,11 +98,12 @@ const CONTROLS: ControlPoint[] = [
 
 const IDW_POWER = 2;
 
-export function geoToMap({ lat, lng }: LatLng): MapPoint {
+/** Inverse-distance weighting across a campus's measured street crossings. */
+export function projectWithControls({ lat, lng }: LatLng, controls: ControlPoint[]): MapPoint {
   let x = 0;
   let y = 0;
   let weightSum = 0;
-  for (const point of CONTROLS) {
+  for (const point of controls) {
     const distance = Math.hypot(lat - point.lat, lng - point.lng);
     if (distance < 1e-12) return { x: point.x, y: point.y };
     const weight = 1 / distance ** IDW_POWER;
@@ -113,11 +114,11 @@ export function geoToMap({ lat, lng }: LatLng): MapPoint {
   return { x: x / weightSum, y: y / weightSum };
 }
 
-export function mapToGeo({ x, y }: MapPoint): LatLng {
+export function unprojectWithControls({ x, y }: MapPoint, controls: ControlPoint[]): LatLng {
   let lat = 0;
   let lng = 0;
   let weightSum = 0;
-  for (const point of CONTROLS) {
+  for (const point of controls) {
     const distance = Math.hypot(x - point.x, y - point.y);
     if (distance < 1e-12) return { lat: point.lat, lng: point.lng };
     const weight = 1 / distance ** IDW_POWER;
@@ -126,6 +127,14 @@ export function mapToGeo({ x, y }: MapPoint): LatLng {
     lng += weight * point.lng;
   }
   return { lat: lat / weightSum, lng: lng / weightSum };
+}
+
+export function geoToMap(point: LatLng): MapPoint {
+  return projectWithControls(point, CONTROLS);
+}
+
+export function mapToGeo(point: MapPoint): LatLng {
+  return unprojectWithControls(point, CONTROLS);
 }
 
 /** True when a point falls on the drawn campus plan. */
