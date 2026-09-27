@@ -8,6 +8,10 @@
  *   SPECTRUM_WEBHOOK_SECRET (optional, for inbound webhooks)
  */
 
+import { loadEnvFiles } from "./load-env.js";
+
+loadEnvFiles();
+
 function phoneDigits(value) {
   return String(value ?? '').replace(/\D/g, '');
 }

@@ -153,7 +153,13 @@ export function ResetPasswordForm({
               <div className="flex items-start gap-3 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3">
                 <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
                 <p className="text-sm font-medium text-blue-800">
-                  Photon Spectrum is not connected in this environment, so use this code for{" "}
+                  Photon isn’t connected yet. Add{" "}
+                  <span className="font-bold">SPECTRUM_PROJECT_ID</span> and{" "}
+                  <span className="font-bold">SPECTRUM_PROJECT_SECRET</span> from{" "}
+                  <a href="https://app.photon.codes" target="_blank" rel="noreferrer" className="underline">
+                    the Photon dashboard
+                  </a>
+                  , restart the server, and the code will iMessage instead. Demo code for{" "}
                   <span className="font-bold">{phoneHint || "your phone"}</span>:{" "}
                   <span className="font-bold tracking-[0.18em]">{demoCode}</span>
                 </p>

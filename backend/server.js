@@ -481,6 +481,10 @@ app.get('/api/auth/challenge/:id', (request, response) => {
   });
 });
 
+app.get('/api/spectrum/status', (_request, response) => {
+  response.json({ connected: spectrumConfigured() });
+});
+
 app.get('/api/auth/me', requireUser, (request, response) => {
   response.json({ user: request.user });
 });

@@ -300,6 +300,22 @@ function SettingsView() {
   const [privacyError, setPrivacyError] = useState<string | null>(null);
   const [twoFactorPending, setTwoFactorPending] = useState(false);
   const [twoFactorError, setTwoFactorError] = useState<string | null>(null);
+  const [spectrumConnected, setSpectrumConnected] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/spectrum/status")
+      .then((response) => response.json())
+      .then((body) => {
+        if (active) setSpectrumConnected(Boolean(body.connected));
+      })
+      .catch(() => {
+        if (active) setSpectrumConnected(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   if (!user) return null;
 
@@ -563,6 +579,19 @@ function SettingsView() {
           <p role="alert" className="mt-2 text-[13px] font-semibold text-coral-text">
             {twoFactorError}
           </p>
+        )}
+        {spectrumConnected === false && (
+          <p className="mt-3 text-[12.5px] font-medium leading-[1.4] text-muted">
+            Photon is not connected. Copy{" "}
+            <a href="https://app.photon.codes" target="_blank" rel="noreferrer" className="font-bold text-brand hover:underline">
+              SPECTRUM_PROJECT_ID
+            </a>{" "}
+            and SPECTRUM_PROJECT_SECRET into <span className="font-semibold text-ink">backend/.env</span>, then restart
+            the server.
+          </p>
+        )}
+        {spectrumConnected === true && (
+          <p className="mt-3 text-[12.5px] font-medium text-brand">Photon Spectrum is connected. Codes go out over iMessage.</p>
         )}
       </section>
 
