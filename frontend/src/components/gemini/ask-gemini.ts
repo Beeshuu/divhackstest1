@@ -135,7 +135,7 @@ export function answerCampusQuestion(
   if (includesAny(query, ["accept event", "check mark", "checkmark", "user led", "user-led", "student posted", "student-posted", "other students"])) {
     if (includesAny(query, ["how", "what is", "what's", "whats", "accept", "check"])) {
       return {
-        text: `User Led Events is the sidebar button above Post Event. It lists student-posted events on your campus only. Tap the check to accept (I'm Going) or the X to reject. ${userLed.length ? `There ${userLed.length === 1 ? "is" : "are"} ${userLed.length} right now:\n${listEvents(userLed)}` : "None are posted right now."}`,
+        text: `User Led Events is the sidebar button above Post Event. It lists student-posted events on your campus only. Close the list with the X in the popup header. Tap the check to accept (I'm Going) or the row X to reject. ${userLed.length ? `There ${userLed.length === 1 ? "is" : "are"} ${userLed.length} right now:\n${listEvents(userLed)}` : "None are posted right now."}`,
         matches: userLed,
       };
     }
@@ -199,14 +199,14 @@ export function answerCampusQuestion(
 
   if (includesAny(query, ["tbd", "no location", "location missing", "without a location"])) {
     return {
-      text: `TBD locations is in the sidebar Location list — tap it again to close. ${tbd.length ? `There ${tbd.length === 1 ? "is" : "are"} ${tbd.length} right now:\n${listEvents(tbd)}` : "The official campus calendar has no TBD listings right now."}`,
+      text: `TBD locations is in the sidebar Location list. Close the popup with the X, Escape, or by tapping TBD again. ${tbd.length ? `There ${tbd.length === 1 ? "is" : "are"} ${tbd.length} right now:\n${listEvents(tbd)}` : "The official campus calendar has no TBD listings right now."}`,
       matches: tbd,
     };
   }
 
   if (includesAny(query, ["remote", "online", "zoom", "virtual"])) {
     return {
-      text: `Remote in the sidebar lists online events. Tap Remote again to close the list. ${remote.length ? `There ${remote.length === 1 ? "is" : "are"} ${remote.length} right now:\n${listEvents(remote)}` : "No remote events are listed right now."}`,
+      text: `Remote in the sidebar lists online events. Close the popup with the X, Escape, or by tapping Remote again. ${remote.length ? `There ${remote.length === 1 ? "is" : "are"} ${remote.length} right now:\n${listEvents(remote)}` : "No remote events are listed right now."}`,
       matches: remote,
     };
   }

@@ -15,7 +15,8 @@ App guide (use this when they ask how something works):
   (University Life at Columbia). Drawer descriptions are 2–3 sentence
   summaries of those listings.
 - Happening Now is today's mapped campus events.
-- Sidebar TBD locations and Remote open a list; tap the same item again to close it.
+- Sidebar TBD locations, Remote, Saved, and User Led Events open a list.
+  Close it with the X on the popup, Escape, or by tapping the same item again.
 - User Led Events (button above Post Event) shows student-posted listings
   from the viewer's campus only. An NYU post is hidden from Columbia, and
   the reverse. Each row has a check to accept (I'm Going) and an X to reject.

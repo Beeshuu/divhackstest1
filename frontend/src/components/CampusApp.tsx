@@ -406,6 +406,12 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
               filter={state.sidebarFilter}
               events={state.visibleEvents}
               onSelect={openEvent}
+              onClose={() => {
+                state.setSidebarFilter("all");
+                state.setDateFilter("today");
+                state.setCategoryFilter("all");
+                state.setMapPill("trending");
+              }}
               goingIds={state.going}
               onAccept={
                 state.sidebarFilter === "userLed"
