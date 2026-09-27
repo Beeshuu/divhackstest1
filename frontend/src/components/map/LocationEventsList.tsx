@@ -80,7 +80,7 @@ export function LocationEventsList({
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 6 }}
         transition={{ duration: 0.18 }}
-        className="absolute inset-x-3 top-[76px] z-20 max-h-[min(68vh,560px)] overflow-hidden rounded-[18px] border border-line bg-panel shadow-float tablet:inset-x-auto tablet:left-4 tablet:w-[min(420px,calc(100%-32px))]"
+        className="absolute inset-x-3 top-[76px] z-20 max-h-[min(72vh,620px)] overflow-hidden rounded-[18px] border border-line bg-panel shadow-float tablet:inset-x-auto tablet:left-4 tablet:w-[min(420px,calc(100%-32px))]"
       >
         <div className="flex items-center justify-between gap-3 px-4 py-3">
           <div className="min-w-0">
@@ -102,7 +102,7 @@ export function LocationEventsList({
           </div>
         </div>
         <div aria-hidden className="mx-3 h-px bg-line" />
-        <ul className="max-h-[min(56vh,460px)] overflow-y-auto p-1.5 scrollbar-none">
+        <ul className="max-h-[min(62vh,540px)] overflow-y-auto p-1.5 scrollbar-none">
           {events.length === 0 ? (
             <li className="px-3 py-8 text-center text-[13.5px] font-medium text-muted">{copy.empty}</li>
           ) : (
