@@ -136,7 +136,7 @@ const app = express();
 const port = Number(process.env.PORT) || 3000;
 const frontendPort = Number(process.env.FRONTEND_PORT) || 3001;
 const CAMPUSES = [
-  { id: 'columbia', south: 40.8036, west: -73.9669, north: 40.8168, east: -73.9505 },
+  { id: 'columbia', south: 40.8007, west: -73.97235, north: 40.81395, east: -73.95255 },
   { id: 'nyu', south: 40.724, west: -74.004, north: 40.7353, east: -73.9904 },
   { id: 'newschool', south: 40.732, west: -74.0, north: 40.74, east: -73.9874 },
   { id: 'fordham', south: 40.8562, west: -73.8942, north: 40.865, east: -73.8802 },

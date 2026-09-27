@@ -14,7 +14,9 @@ export interface GeoResult {
 export interface GeolocationState extends GeoResult {
   /**
    * Asks for location the first time it is called, then keeps watching.
-   * Resolves with the outcome; never re-prompts after a denial.
+   * Concurrent callers share the in-flight request. A browser denial can be
+   * retried from a later user gesture — the browser will not re-prompt if the
+   * permission is actually blocked.
    */
   request: () => Promise<GeoResult>;
 }
@@ -29,6 +31,7 @@ export function useGeolocation(): GeolocationState {
   const watchId = useRef<number | null>(null);
   const statusRef = useRef<GeoStatus>("idle");
   const positionRef = useRef<LatLng | null>(null);
+  const inflight = useRef<Promise<GeoResult> | null>(null);
 
   const update = useCallback((next: GeoStatus) => {
     statusRef.current = next;
@@ -43,12 +46,8 @@ export function useGeolocation(): GeolocationState {
   );
 
   const request = useCallback((): Promise<GeoResult> => {
-    const current = statusRef.current;
-    const settled = (status: GeoStatus) => Promise.resolve({ status, position: positionRef.current });
-    // A denial is final for the session; timeouts ("unavailable") may be retried
-    // because retrying never shows another permission prompt.
-    if (current === "denied" || current === "requesting") return settled(current);
-    if (current === "granted" && positionRef.current) return settled("granted");
+    const settled = (next: GeoStatus) => Promise.resolve({ status: next, position: positionRef.current });
+    if (inflight.current) return inflight.current;
 
     if (typeof navigator === "undefined" || !("geolocation" in navigator)) {
       update("unavailable");
@@ -56,7 +55,7 @@ export function useGeolocation(): GeolocationState {
     }
 
     update("requesting");
-    return new Promise((resolve) => {
+    const pending = new Promise<GeoResult>((resolve) => {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           const next = { lat: pos.coords.latitude, lng: pos.coords.longitude };
@@ -78,6 +77,11 @@ export function useGeolocation(): GeolocationState {
           }
         },
         (error) => {
+          if (positionRef.current) {
+            update("granted");
+            resolve({ status: "granted", position: positionRef.current });
+            return;
+          }
           const next = error.code === error.PERMISSION_DENIED ? "denied" : "unavailable";
           update(next);
           resolve({ status: next, position: null });
@@ -85,6 +89,11 @@ export function useGeolocation(): GeolocationState {
         { enableHighAccuracy: true, timeout: 12_000, maximumAge: 30_000 },
       );
     });
+    inflight.current = pending;
+    void pending.finally(() => {
+      if (inflight.current === pending) inflight.current = null;
+    });
+    return pending;
   }, [update]);
 
   return { status, position, request };

@@ -2,8 +2,8 @@ import type { MapBuildingLabel, MapStreetLabel } from "@/lib/constants";
 import { MAP_LABELS } from "@/lib/constants";
 import { COLLEGES } from "@/lib/colleges";
 import {
+  COLUMBIA_CONTROLS,
   MAP_ART,
-  PLAN,
   projectWithControls,
   unprojectWithControls,
   type ControlPoint,
@@ -236,19 +236,6 @@ function defineCampus(spec: CampusSpec): CampusDefinition {
   };
 }
 
-const COLUMBIA_CONTROLS: ControlPoint[] = [
-  { lat: 40.80385, lng: -73.96675, x: PLAN.x.broadway, y: PLAN.y[110] },
-  { lat: 40.80798, lng: -73.96415, x: PLAN.x.broadway, y: PLAN.y[116] },
-  { lat: 40.81175, lng: -73.96105, x: PLAN.x.broadway, y: PLAN.y[122] },
-  { lat: 40.8033, lng: -73.96285, x: PLAN.x.amsterdam, y: PLAN.y[110] },
-  { lat: 40.80755, lng: -73.96005, x: PLAN.x.amsterdam, y: PLAN.y[116] },
-  { lat: 40.8112, lng: -73.95675, x: PLAN.x.amsterdam, y: PLAN.y[122] },
-  { lat: 40.8046, lng: -73.97015, x: PLAN.x.riverside, y: PLAN.y[110] },
-  { lat: 40.80875, lng: -73.96755, x: PLAN.x.riverside, y: PLAN.y[116] },
-  { lat: 40.8029, lng: -73.96005, x: PLAN.x.morningside, y: PLAN.y[110] },
-  { lat: 40.80715, lng: -73.95725, x: PLAN.x.morningside, y: PLAN.y[116] },
-];
-
 const columbiaSpec: CampusSpec = {
   id: "columbia",
   name: "Columbia University",
@@ -263,7 +250,9 @@ const columbiaSpec: CampusSpec = {
   featured: MAP_LABELS.buildings,
   seed: 1,
   controls: COLUMBIA_CONTROLS,
-  bounds: { south: 40.8036, west: -73.9669, north: 40.8168, east: -73.9505 },
+  // Cover the drawn 110th–122nd grid, including Riverside — the old box
+  // cut off Barnard/Riverside and still counted 125th as on-campus.
+  bounds: boundsFromControls(COLUMBIA_CONTROLS),
 };
 
 const barnardSpec: CampusSpec = {
@@ -990,6 +979,17 @@ export function campusMapToGeo(point: MapPoint, campusId: CampusId): LatLng {
 
 export function isOnCampusPlan({ x, y }: MapPoint): boolean {
   return x >= 0 && x <= 100 && y >= 0 && y <= 100;
+}
+
+/**
+ * True when a GPS fix belongs on this college's drawing.
+ * Inverse-distance weighting always lands near the control cluster, so a
+ * Times Square reading would otherwise look like College Walk. Geographic
+ * bounds (from the street crossings) have to pass first.
+ */
+export function isLocationOnCampus(point: LatLng, campusId: CampusId): boolean {
+  const campus = getCampus(campusId);
+  return containsLatLng(campus.spec.bounds, point) && isOnCampusPlan(projectWithControls(point, campus.spec.controls));
 }
 
 export const ALL_CAMPUS_BOUNDS: GeoBounds[] = (Object.values(CAMPUSES) as CampusDefinition[])

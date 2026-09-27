@@ -28,7 +28,7 @@ import {
   campusMapToGeo,
   eventCampusId,
   geoToCampusMap,
-  isOnCampusPlan,
+  isLocationOnCampus,
   sharesCampusMap,
 } from "@/lib/campuses";
 import { CATEGORY_STYLE } from "@/lib/constants";
@@ -186,12 +186,14 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
   const campusEvents = state.events.filter((event) =>
     sharesCampusMap(eventCampusId(event), campus.spec.id),
   );
-  const userPoint = geo.position ? geoToCampusMap(geo.position, campus.spec.id) : null;
-  const userOnMap = userPoint && isOnCampusPlan(userPoint) ? userPoint : null;
+  const userOnMap =
+    geo.position && isLocationOnCampus(geo.position, campus.spec.id)
+      ? geoToCampusMap(geo.position, campus.spec.id)
+      : null;
 
   useEffect(() => {
     if (!geo.position) return;
-    const onCampus = isOnCampusPlan(geoToCampusMap(geo.position, campus.spec.id));
+    const onCampus = isLocationOnCampus(geo.position, campus.spec.id);
     setOutOfReach(!onCampus);
     if (onCampus) setHideOutOfReach(false);
   }, [campus.spec.id, geo.position]);
@@ -205,15 +207,14 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
       if (message && !options?.quiet) state.showToast(message);
       return false;
     }
-    const point = geoToCampusMap(result.position, campus.spec.id);
-    if (!isOnCampusPlan(point)) {
+    if (!isLocationOnCampus(result.position, campus.spec.id)) {
       setOutOfReach(true);
       setHideOutOfReach(false);
       if (!options?.quiet) state.showToast(OUT_OF_REACH);
       return false;
     }
     setOutOfReach(false);
-    mapRef.current?.centerOn(point, 1.8);
+    mapRef.current?.centerOn(geoToCampusMap(result.position, campus.spec.id), 1.8);
     return true;
   };
 
