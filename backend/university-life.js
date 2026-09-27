@@ -2,7 +2,10 @@
  * Live events from University Life (universitylife.columbia.edu/events).
  * The Drupal listing embeds `var events_data = [...]`. When that page is
  * blocked, fall back to the same Bedework calendar the listing imports from.
+ * Listing copy is summarized with the built-in Gemini route.
  */
+
+import { summarizeListings } from "./gemini-summarize.js";
 
 const ULIFE_PAGE = "https://universitylife.columbia.edu/events";
 const BEDEWORK_FEED =
@@ -80,18 +83,30 @@ const CATEGORY_RULES = [
 ];
 
 let cache = { at: 0, payload: null };
+let inflight = null;
 
 function decode(value) {
-  return String(value ?? "")
-    .replace(/&amp;/g, "&")
-    .replace(/&#039;/g, "'")
-    .replace(/&apos;/g, "'")
-    .replace(/&quot;/g, '"')
-    .replace(/&nbsp;/g, " ")
-    .replace(/\\u00a0/g, " ")
-    .replace(/\t+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+  let text = String(value ?? "");
+  for (let i = 0; i < 2; i += 1) {
+    text = text
+      .replace(/&nbsp;/gi, " ")
+      .replace(/&amp;/gi, "&")
+      .replace(/&lt;/gi, "<")
+      .replace(/&gt;/gi, ">")
+      .replace(/&quot;/gi, '"')
+      .replace(/&apos;/gi, "'")
+      .replace(/&rsquo;/gi, "'")
+      .replace(/&lsquo;/gi, "'")
+      .replace(/&rdquo;/gi, '"')
+      .replace(/&ldquo;/gi, '"')
+      .replace(/&ndash;/gi, "–")
+      .replace(/&mdash;/gi, "—")
+      .replace(/&hellip;/gi, "...")
+      .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+      .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCharCode(parseInt(n, 16)))
+      .replace(/\\u00a0/g, " ");
+  }
+  return text.replace(/\t+/g, " ").replace(/\s+/g, " ").trim();
 }
 
 function stripHtml(value) {
@@ -261,10 +276,7 @@ async function fetchText(url) {
   return response.text();
 }
 
-export async function loadUniversityLifeEvents() {
-  const now = Date.now();
-  if (cache.payload && now - cache.at < CACHE_MS) return cache.payload;
-
+async function refreshUniversityLifeEvents() {
   let events = [];
   let source = "columbia-calendar";
 
@@ -291,7 +303,19 @@ export async function loadUniversityLifeEvents() {
     return true;
   });
 
+  events = await summarizeListings(events);
+
   const payload = { events, fetchedAt: new Date().toISOString(), source, page: ULIFE_PAGE };
-  cache = { at: now, payload };
+  cache = { at: Date.now(), payload };
   return payload;
+}
+
+export async function loadUniversityLifeEvents() {
+  const now = Date.now();
+  if (cache.payload && now - cache.at < CACHE_MS) return cache.payload;
+  if (inflight) return inflight;
+  inflight = refreshUniversityLifeEvents().finally(() => {
+    inflight = null;
+  });
+  return inflight;
 }
