@@ -230,6 +230,11 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
           selected={state.sidebarFilter}
           onSelect={(filter) => {
             state.setSidebarFilter(filter);
+            if (filter === "all") {
+              state.setDateFilter("today");
+              state.setCategoryFilter("all");
+              state.setMapPill("trending");
+            }
             setSidebarOpen(false);
           }}
           savedCount={state.saved.size}

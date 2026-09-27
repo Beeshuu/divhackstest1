@@ -37,9 +37,18 @@ export function timeStatusFor(start: string, end: string, now: Date = new Date()
   return "Ended";
 }
 
-/** "Today, Sep 26" */
+/** "Today, Sep 26" in New York, matching University Life listings. */
 export function todayLabel(now: Date = new Date()): string {
-  return `Today, ${now.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+  return `Today, ${now.toLocaleDateString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric" })}`;
+}
+
+export function isEventToday(event: { dateLabel: string }): boolean {
+  return event.dateLabel.startsWith("Today");
+}
+
+/** Campus-map events. TBD and remote listings have their own sidebar lists. */
+export function isMappedCampusEvent(event: { locationKind?: string }): boolean {
+  return event.locationKind !== "tbd" && event.locationKind !== "remote";
 }
 
 /** True if end is strictly after start (both "HH:MM"). */
