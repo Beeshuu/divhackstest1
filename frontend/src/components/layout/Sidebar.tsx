@@ -2,7 +2,7 @@
 
 import type { ComponentType } from "react";
 import { motion } from "framer-motion";
-import { Heart, MapPinOff, Monitor, Plus, TrendingUp, Users, X } from "lucide-react";
+import { MapPinOff, Monitor, Plus, TrendingUp, Users, X } from "lucide-react";
 
 import { GeminiSparkle } from "@/components/gemini/GeminiSparkle";
 import { BookmarkIcon, HouseIcon } from "@/components/icons/CategoryIcons";
@@ -40,7 +40,6 @@ interface SidebarProps {
   userLedCount: number;
   onPostEvent: () => void;
   onAskGemini: () => void;
-  onDonate: () => void;
 }
 
 /** Category rail: filters the events shown on the map. */
@@ -55,7 +54,6 @@ export function Sidebar({
   userLedCount,
   onPostEvent,
   onAskGemini,
-  onDonate,
 }: SidebarProps) {
   return (
     <aside
@@ -192,18 +190,6 @@ export function Sidebar({
       >
         <GeminiSparkle size={18} />
         Ask Gemini
-      </motion.button>
-
-      <motion.button
-        type="button"
-        onClick={onDonate}
-        whileHover={{ y: -1 }}
-        whileTap={{ scale: 0.98, y: 0 }}
-        transition={{ duration: 0.15, ease: "easeOut" }}
-        className="mt-auto mb-4 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#0D9488] text-[16px] font-bold text-white shadow-[0_6px_16px_rgb(13_148_136_/_0.22)] transition-colors duration-150 hover:bg-[#0F766E]"
-      >
-        <Heart size={18} strokeWidth={2.3} aria-hidden />
-        Donate
       </motion.button>
     </aside>
   );
