@@ -990,8 +990,13 @@ function proxyFrontend(request, response) {
   request.pipe(upstream);
 }
 
-// Browser requests go to the Next.js app; /api/* stays on this server.
+// Browser requests go to the Next.js app. Unknown /api/* stays here so
+// removed routes (like /api/donate) return JSON 404s instead of looping
+// through the Next rewrite back to this server.
 app.use((request, response) => {
+  if ((request.path ?? request.url ?? '').startsWith('/api')) {
+    return response.status(404).json({ error: 'That endpoint does not exist.' });
+  }
   proxyFrontend(request, response);
 });
 
