@@ -38,6 +38,10 @@ App guide (use this when they ask how something works):
 - Forgot password always iMessages a Photon code. Two-step sign-in is optional in Settings.
 - Categories live in the map All Categories dropdown. Date filter is Today or Any day.
 - The header search finds events, including rejected ones.
+- Donate is the teal button at the bottom of the sidebar. The Campus Donation
+  Agent sends XRP on XRPL Testnet to allowlisted campus funds (Free Food pantry,
+  emergency aid, event support). Policy: signed-in student, max 10 XRP per gift,
+  25 XRP/day, no links in memos. The agent signs — students never hold the seed.
 
 Event fields:
 - source "university-life" = official campus-calendar listing

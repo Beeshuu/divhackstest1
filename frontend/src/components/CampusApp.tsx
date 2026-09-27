@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence } from "framer-motion";
 
 import { AccountPanel, type AccountView } from "@/components/account/AccountPanel";
+import { DonateModal } from "@/components/donate/DonateModal";
 import { CreateEventModal } from "@/components/events/CreateEventModal";
 import { EventDrawer } from "@/components/events/EventDrawer";
 import { AskGeminiFab } from "@/components/gemini/AskGeminiFab";
@@ -131,6 +132,7 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
   const [hideOutOfReach, setHideOutOfReach] = useState(false);
   const [directionsEvent, setDirectionsEvent] = useState<CampusEvent | null>(null);
   const [geminiOpen, setGeminiOpen] = useState(false);
+  const [donateOpen, setDonateOpen] = useState(false);
   // The mobile bottom sheet would cover the map while choosing a spot.
   const isSheet = useMediaQuery("(max-width: 899px)");
   const selected = state.selectedEvent;
@@ -323,6 +325,10 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
           userLedCount={state.userLedCount}
           onPostEvent={openComposer}
           onAskGemini={openGemini}
+          onDonate={() => {
+            setSidebarOpen(false);
+            setDonateOpen(true);
+          }}
         />
 
         {sidebarOpen && (
@@ -513,6 +519,7 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
           onChooseOnMap={() => setComposer("picking")}
           onSubmit={submitDraft}
         />
+        <DonateModal open={donateOpen} onClose={() => setDonateOpen(false)} authFetch={authFetch} />
 
         <AnimatePresence initial={false}>
           {showDrawer && selected && (
