@@ -249,12 +249,8 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
     if (!located) mapRef.current?.reset();
   };
 
-  const handlePill = async (pill: MapPill) => {
-    if (pill === "nearMe") {
-      if (await locateUser()) state.setMapPill("nearMe");
-      return;
-    }
-    state.setMapPill(pill === state.mapPill && pill !== "trending" ? "trending" : pill);
+  const handlePill = (pill: MapPill) => {
+    state.setMapPill(pill);
   };
 
   return (
@@ -380,7 +376,6 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
           <MapFilters
             activePill={state.mapPill}
             onPillClick={handlePill}
-            locating={geo.status === "requesting"}
             dateFilter={state.dateFilter}
             onDateChange={state.setDateFilter}
             categoryFilter={state.categoryFilter}

@@ -91,7 +91,7 @@ export interface EventImage {
 export type SidebarFilter = "all" | "saved" | "tbd" | "remote" | "userLed";
 
 /** Single-select view pills floating over the map. */
-export type MapPill = "trending" | "nearMe";
+export type MapPill = "trending";
 
 export type DateFilter = "today" | "any";
 

@@ -14,7 +14,7 @@ import type { MapPoint } from "@/lib/geo";
 import { cn } from "@/lib/utils";
 import type { CampusEvent } from "@/types/event";
 
-/** Imperative camera controls, used by Near Me and the locate button. */
+/** Imperative camera controls, used by the locate button. */
 export interface MapViewHandle {
   centerOn: (point: MapPoint, zoom?: number) => void;
   reset: () => void;
