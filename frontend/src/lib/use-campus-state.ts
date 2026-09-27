@@ -289,6 +289,8 @@ export function useCampusState(
         campusId: eventCampusIdValue,
         latitude: campusMapToGeo(draft.point, eventCampusIdValue).lat,
         longitude: campusMapToGeo(draft.point, eventCampusIdValue).lng,
+        images: draft.images ?? [],
+        primaryImageUrl: draft.images?.find((image) => image.isPrimary)?.url ?? draft.images?.[0]?.url,
       };
       setCreatedEvents((prev) => [...prev, event]);
       setSelectedId(event.id);
@@ -298,6 +300,15 @@ export function useCampusState(
     },
     [campusId],
   );
+
+  const updateUserEventImages = useCallback((eventId: string, images: CampusEvent["images"]) => {
+    const list = images ?? [];
+    const primaryImageUrl = list.find((image) => image.isPrimary)?.url ?? list[0]?.url;
+    const patch = (event: CampusEvent) =>
+      event.id === eventId ? { ...event, images: list, primaryImageUrl } : event;
+    setCreatedEvents((prev) => prev.map(patch));
+    setCommunityEvents((prev) => prev.map(patch));
+  }, []);
 
   const clearFilters = useCallback(() => {
     setQuery("");
@@ -334,6 +345,7 @@ export function useCampusState(
     categoryFilter,
     setCategoryFilter,
     createEvent,
+    updateUserEventImages,
     toast,
     showToast,
     dismissToast: () => setToast(null),

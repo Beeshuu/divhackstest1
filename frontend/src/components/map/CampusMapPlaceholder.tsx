@@ -34,7 +34,7 @@ interface CampusMapPlaceholderProps {
   /** When set, the map is in "choose a location" mode and taps call this. */
   onPickPoint?: (point: MapPoint) => void;
   /** Preview pin for an event being created. */
-  draftPin?: (MapPoint & Pick<CampusEvent, "markerColor" | "iconType">) | null;
+  draftPin?: (MapPoint & Pick<CampusEvent, "markerColor" | "iconType"> & { imageUrl?: string }) | null;
 }
 
 /**
@@ -165,7 +165,12 @@ export function CampusMapPlaceholder({
                 style={{ translateX: "-50%", translateY: "-100%" }}
               >
                 <div className="relative drop-shadow-[0_3px_5px_rgba(15,37,71,0.22)]" style={{ width: 39, height: 50 }}>
-                  <MarkerPin markerColor={draftPin.markerColor} iconType={draftPin.iconType} selected />
+                  <MarkerPin
+                    markerColor={draftPin.markerColor}
+                    iconType={draftPin.iconType}
+                    selected
+                    imageUrl={draftPin.imageUrl}
+                  />
                 </div>
               </motion.div>
             </MapAnchor>

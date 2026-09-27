@@ -5,7 +5,9 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Check, Info, MapPin, X } from "lucide-react";
 
 import { CategoryGlyph } from "@/components/icons/CategoryIcons";
+import { EventPhotoPicker } from "@/components/events/EventPhotoPicker";
 import { CATEGORY_STYLE, EVENT_CATEGORIES, MARKER_PALETTE } from "@/lib/constants";
+import { filesToEventImages, markPrimary, MAX_EVENT_IMAGES } from "@/lib/event-images";
 import { cn, isTimeRangeValid } from "@/lib/utils";
 import type { EventDraft } from "@/types/event";
 
@@ -237,6 +239,25 @@ export function CreateEventModal({
                 </div>
                 {error("time")}
               </div>
+
+              <EventPhotoPicker
+                images={draft.images}
+                canEdit
+                onAdd={(files) => {
+                  void filesToEventImages(files).then((added) => {
+                    const room = MAX_EVENT_IMAGES - draft.images.length;
+                    const next = [...draft.images, ...added.slice(0, room)];
+                    const primary = next.findIndex((image) => image.isPrimary);
+                    set("images", markPrimary(next, primary >= 0 ? primary : 0));
+                  });
+                }}
+                onSetPrimary={(index) => set("images", markPrimary(draft.images, index))}
+                onRemove={(index) => {
+                  const next = draft.images.filter((_, item) => item !== index);
+                  const primary = next.findIndex((image) => image.isPrimary);
+                  set("images", markPrimary(next, primary >= 0 ? primary : 0));
+                }}
+              />
             </div>
 
             <div className="px-6 pb-6 pt-4 tablet:px-7">

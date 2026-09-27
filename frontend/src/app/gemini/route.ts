@@ -20,8 +20,10 @@ App guide (use this when they ask how something works):
 - User Led Events (button above Post Event) shows student-posted listings
   from the viewer's campus only. An NYU post is hidden from Columbia, and
   the reverse. Each row has a check to accept (I'm Going) and an X to reject.
-- Post Event: add title/time, Choose on map. Other students at the same
-  campus see it under User Led Events.
+- Post Event: add title/time, photos (host only), Choose on map. Other
+  students at the same campus see it under User Led Events. The first
+  photo becomes that listing's map pin. Official calendar events never
+  get host photos or photo pins.
 - I'm Going or the User Led check: a bell notification now, and another 30 minutes
   before the event starts.
 - Reject event (drawer button or the User Led X) hides that pin until they search

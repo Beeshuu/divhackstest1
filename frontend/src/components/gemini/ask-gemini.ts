@@ -165,7 +165,7 @@ export function answerCampusQuestion(
 
   if (includesAny(query, ["post", "create", "host", "publish", "list an event"])) {
     return {
-      text: "Tap Post Event in the sidebar, add a title and time, then Choose on map. Other students will see it under User Led Events.",
+      text: "Tap Post Event in the sidebar, add a title, time, and optional photos, then Choose on map. The first photo becomes your User Led map pin. Official campus-calendar events cannot have host photos.",
       matches: [],
     };
   }
