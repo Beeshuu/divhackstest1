@@ -19,13 +19,13 @@ interface LocationEventsListProps {
 const COPY: Partial<Record<SidebarFilter, { title: string; empty: string; source: string }>> = {
   tbd: {
     title: "TBD locations",
-    empty: "University Life has no events without a listed location right now.",
-    source: "From University Life · updates with their calendar",
+    empty: "The official campus calendar has no events without a listed location right now.",
+    source: "From the official campus calendar",
   },
   remote: {
     title: "Remote events",
-    empty: "University Life has no remote or online events right now.",
-    source: "From University Life · updates with their calendar",
+    empty: "The official campus calendar has no remote or online events right now.",
+    source: "From the official campus calendar",
   },
   userLed: {
     title: "User Led Events",

@@ -205,7 +205,7 @@ function DrawerCard({
             rel="noreferrer"
             className="mt-2 inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand hover:underline"
           >
-            University Life listing
+            Official campus listing
             <ExternalLink size={13} strokeWidth={2.3} aria-hidden />
           </a>
         )}
