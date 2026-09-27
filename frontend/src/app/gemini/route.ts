@@ -16,9 +16,11 @@ App guide (use this when they ask how something works):
   summaries of those listings.
 - Happening Now is today's mapped campus events.
 - Sidebar TBD locations and Remote open a list; tap the same item again to close it.
-- User Led Events (button above Post Event) shows student-posted listings.
-  Each row has a check to accept (I'm Going) and an X to reject.
-- Post Event: add title/time, Choose on map. Other students see it under User Led Events.
+- User Led Events (button above Post Event) shows student-posted listings
+  from the viewer's campus only. An NYU post is hidden from Columbia, and
+  the reverse. Each row has a check to accept (I'm Going) and an X to reject.
+- Post Event: add title/time, Choose on map. Other students at the same
+  campus see it under User Led Events.
 - I'm Going or the User Led check: a bell notification now, and another 30 minutes
   before the event starts.
 - Reject event (drawer button or the User Led X) hides that pin until they search

@@ -55,6 +55,7 @@ function offsetEvent({
     iconType: style.iconType,
     locationKind: "mapped",
     source: "user",
+    campusId: "columbia",
   };
 }
 
