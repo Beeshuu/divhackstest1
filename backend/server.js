@@ -136,26 +136,38 @@ const app = express();
 const port = Number(process.env.PORT) || 3000;
 const frontendPort = Number(process.env.FRONTEND_PORT) || 3001;
 const CAMPUSES = [
-  { south: 40.8036, west: -73.9669, north: 40.8168, east: -73.9505 },
-  { south: 40.724, west: -74.004, north: 40.7353, east: -73.9904 },
-  { south: 40.732, west: -74.0, north: 40.74, east: -73.9874 },
-  { south: 40.8562, west: -73.8942, north: 40.865, east: -73.8802 },
-  { south: 40.7064, west: -74.0104, north: 40.715, east: -74.0 },
-  { south: 40.7238, west: -73.9958, north: 40.7322, east: -73.987 },
-  { south: 40.7366, west: -73.9916, north: 40.7446, east: -73.9788 },
-  { south: 40.8154, west: -73.9566, north: 40.824, east: -73.944 },
-  { south: 40.7642, west: -73.9702, north: 40.7724, east: -73.959 },
-  { south: 40.6266, west: -73.9586, north: 40.6346, east: -73.9462 },
-  { south: 40.733, west: -73.8252, north: 40.7406, east: -73.815 },
-  { south: 40.7176, west: -73.8014, north: 40.7264, east: -73.7896 },
-  { south: 40.7406, west: -74.0306, north: 40.7484, east: -74.021 },
+  { id: 'columbia', south: 40.8036, west: -73.9669, north: 40.8168, east: -73.9505 },
+  { id: 'nyu', south: 40.724, west: -74.004, north: 40.7353, east: -73.9904 },
+  { id: 'newschool', south: 40.732, west: -74.0, north: 40.74, east: -73.9874 },
+  { id: 'fordham', south: 40.8562, west: -73.8942, north: 40.865, east: -73.8802 },
+  { id: 'pace', south: 40.7064, west: -74.0104, north: 40.715, east: -74.0 },
+  { id: 'cooper', south: 40.7238, west: -73.9958, north: 40.7322, east: -73.987 },
+  { id: 'baruch', south: 40.7366, west: -73.9916, north: 40.7446, east: -73.9788 },
+  { id: 'ccny', south: 40.8154, west: -73.9566, north: 40.824, east: -73.944 },
+  { id: 'hunter', south: 40.7642, west: -73.9702, north: 40.7724, east: -73.959 },
+  { id: 'brooklyn', south: 40.6266, west: -73.9586, north: 40.6346, east: -73.9462 },
+  { id: 'queens', south: 40.733, west: -73.8252, north: 40.7406, east: -73.815 },
+  { id: 'stjohns', south: 40.7176, west: -73.8014, north: 40.7264, east: -73.7896 },
+  { id: 'stevens', south: 40.7406, west: -74.0306, north: 40.7484, east: -74.021 },
 ];
 
-function isOnCampus(latitude, longitude) {
-  return CAMPUSES.some(
-    (campus) =>
-      latitude >= campus.south && latitude <= campus.north && longitude >= campus.west && longitude <= campus.east,
+function campusBounds(campusId) {
+  const id = String(campusId ?? '').toLowerCase();
+  if (id === 'barnard') return CAMPUSES.find((campus) => campus.id === 'columbia');
+  return CAMPUSES.find((campus) => campus.id === id) ?? null;
+}
+
+function inBounds(bounds, latitude, longitude) {
+  return (
+    latitude >= bounds.south &&
+    latitude <= bounds.north &&
+    longitude >= bounds.west &&
+    longitude <= bounds.east
   );
+}
+
+function isOnCampus(latitude, longitude) {
+  return CAMPUSES.some((campus) => inBounds(campus, latitude, longitude));
 }
 
 const EVENT_CATEGORIES = new Set(['Free Food', 'Social', 'Academic', 'Career', 'Sports', 'Entertainment']);
@@ -737,9 +749,11 @@ app.get('/api/official-events', async (request, response) => {
 
 app.get('/api/events', (request, response) => {
   const viewer = currentUser(request);
+  const bounds = campusBounds(request.query.campus);
   const rows = db
     .prepare(`SELECT ${EVENT_FIELDS} FROM events WHERE events.closes_at > ? ORDER BY events.starts_at`)
-    .all(new Date().toISOString());
+    .all(new Date().toISOString())
+    .filter((row) => !bounds || inBounds(bounds, row.latitude, row.longitude));
   response.json(rows.map((row) => attachGoing(row, viewer?.id)));
 });
 

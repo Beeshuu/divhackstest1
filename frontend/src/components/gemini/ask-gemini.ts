@@ -135,7 +135,7 @@ export function answerCampusQuestion(
   if (includesAny(query, ["accept event", "check mark", "checkmark", "user led", "user-led", "student posted", "student-posted", "other students"])) {
     if (includesAny(query, ["how", "what is", "what's", "whats", "accept", "check"])) {
       return {
-        text: `User Led Events is the sidebar button above Post Event. It lists student-posted events. Tap the check to accept (I'm Going) or the X to reject. ${userLed.length ? `There ${userLed.length === 1 ? "is" : "are"} ${userLed.length} right now:\n${listEvents(userLed)}` : "None are posted right now."}`,
+        text: `User Led Events is the sidebar button above Post Event. It lists student-posted events on your campus only. Tap the check to accept (I'm Going) or the X to reject. ${userLed.length ? `There ${userLed.length === 1 ? "is" : "are"} ${userLed.length} right now:\n${listEvents(userLed)}` : "None are posted right now."}`,
         matches: userLed,
       };
     }

@@ -29,8 +29,8 @@ const COPY: Partial<Record<SidebarFilter, { title: string; empty: string; source
   },
   userLed: {
     title: "User Led Events",
-    empty: "No student-posted events right now. Use Post Event to add one.",
-    source: "Posted by students on Campus Connect",
+    empty: "No student-posted events on your campus right now. Use Post Event to add one.",
+    source: "Posted by students on your campus",
   },
   saved: {
     title: "Saved",

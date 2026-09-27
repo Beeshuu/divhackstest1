@@ -112,8 +112,11 @@ export function useCampusState(
   }, [userId, rejected]);
 
   const events = useMemo(
-    () => [...liveEvents, ...USER_LED_EVENTS, ...communityEvents, ...MOCK_EVENTS, ...createdEvents],
-    [liveEvents, communityEvents, createdEvents],
+    () =>
+      [...liveEvents, ...USER_LED_EVENTS, ...communityEvents, ...MOCK_EVENTS, ...createdEvents].filter(
+        (event) => event.source !== "user" || sharesCampusMap(eventCampusId(event), campusId),
+      ),
+    [liveEvents, communityEvents, createdEvents, campusId],
   );
   const selectedEvent = events.find((e) => e.id === selectedId);
 
@@ -129,7 +132,7 @@ export function useCampusState(
     }
 
     try {
-      const response = await fetch("/api/events");
+      const response = await fetch(`/api/events?campus=${encodeURIComponent(campusId)}`);
       if (!response.ok) return;
       const body: unknown = await response.json();
       const rows = Array.isArray(body) ? body : [];
@@ -168,7 +171,9 @@ export function useCampusState(
         if (sidebarFilter === "remote") {
           return event.locationKind === "remote" && sharesCampusMap(eventCampusId(event), campusId);
         }
-        if (sidebarFilter === "userLed") return isUserLedEvent(event, userName);
+        if (sidebarFilter === "userLed") {
+          return isUserLedEvent(event, userName) && sharesCampusMap(eventCampusId(event), campusId);
+        }
         if (event.locationKind === "tbd" || event.locationKind === "remote") return false;
         if (!sharesCampusMap(eventCampusId(event), campusId)) return false;
         if (categoryFilter !== "all" && event.category !== categoryFilter) return false;
@@ -345,7 +350,12 @@ export function useCampusState(
         !rejected.has(event.id) &&
         sharesCampusMap(eventCampusId(event), campusId),
     ).length,
-    userLedCount: events.filter((event) => isUserLedEvent(event, userName) && !rejected.has(event.id)).length,
+    userLedCount: events.filter(
+      (event) =>
+        isUserLedEvent(event, userName) &&
+        !rejected.has(event.id) &&
+        sharesCampusMap(eventCampusId(event), campusId),
+    ).length,
     refreshLiveEvents,
   };
 }
