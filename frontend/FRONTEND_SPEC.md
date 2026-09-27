@@ -38,15 +38,13 @@ manager, a data layer, or a second icon set. Custom Tailwind components are pref
 ## Running it
 
 ```bash
-cd frontend
-npm install
-npm run dev     # http://localhost:3000, or -p <port>
+cd backend && npm install && npm start          # API — http://localhost:3000
+cd frontend && npm install && npm run dev -- -p 3001
 npm run build   # must pass before any change is considered done
 ```
 
-`next.config.ts` pins `turbopack.root` because the repository root also contains a
-lockfile (an unrelated legacy Vite/Express prototype), and disables the floating dev
-indicator so it does not overlap the map controls during visual review.
+`next.config.ts` pins `turbopack.root` to the frontend folder and disables the
+floating dev indicator so it does not overlap the map controls during visual review.
 
 ## Component structure
 

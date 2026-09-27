@@ -6,8 +6,8 @@ alwaysApply: false
 
 # Campus Connect frontend
 
-Read `frontend/FRONTEND_SPEC.md` before making visual changes — it records the measured
-dimensions, colour tokens and typography scale this UI is built from.
+Read `FRONTEND_SPEC.md` in this folder before making visual changes — it records the
+measured dimensions, colour tokens and typography scale this UI is built from.
 
 ## The reference design is authoritative
 

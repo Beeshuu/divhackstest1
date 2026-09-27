@@ -1,1 +1,1 @@
-export { default } from "../../../frontend-userlogin-page";
+export { default } from "./AuthPage";

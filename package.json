@@ -1,18 +1,10 @@
 {
-  "name": "divhacks",
+  "name": "campus-connect",
   "version": "1.0.0",
   "private": true,
-  "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "start": "npm run build && node server.js"
-  },
-  "dependencies": {
-    "better-sqlite3": "^13.0.3",
-    "express": "^5.2.1",
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1",
-    "vite": "^7.1.7"
+    "dev": "npm run dev --prefix frontend -- -p 3001",
+    "dev:backend": "npm start --prefix backend",
+    "build": "npm run build --prefix frontend"
   }
 }
