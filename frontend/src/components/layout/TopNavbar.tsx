@@ -31,6 +31,7 @@ interface TopNavbarProps extends SearchProps {
   onNoticesSeen: () => void;
   onNotificationAction: (action: NotificationAction) => void;
   onOpenAccount: (view: AccountView) => void;
+  photonEnabled?: boolean;
 }
 
 /**
@@ -46,6 +47,7 @@ export function TopNavbar({
   onNoticesSeen,
   onNotificationAction,
   onOpenAccount,
+  photonEnabled,
   ...search
 }: TopNavbarProps) {
   return (
@@ -90,6 +92,7 @@ export function TopNavbar({
         onSelectEvent={search.onSelectResult}
         onNotificationAction={onNotificationAction}
         onOpenAccount={onOpenAccount}
+        photonEnabled={photonEnabled}
       />
     </header>
   );
@@ -219,6 +222,7 @@ function AccountCluster({
   onSelectEvent,
   onNotificationAction,
   onOpenAccount,
+  photonEnabled,
 }: {
   onAskGemini: () => void;
   events: CampusEvent[];
@@ -228,6 +232,7 @@ function AccountCluster({
   onSelectEvent: (event: CampusEvent) => void;
   onNotificationAction: (action: NotificationAction) => void;
   onOpenAccount: (view: AccountView) => void;
+  photonEnabled?: boolean;
 }) {
   return (
     <div className="flex shrink-0 items-center gap-2 pr-4 tablet:gap-3.5 tablet:pr-[25px]">
@@ -251,6 +256,7 @@ function AccountCluster({
         events={events}
         onSelectEvent={onSelectEvent}
         onAction={onNotificationAction}
+        photonEnabled={photonEnabled}
       />
 
       <span aria-hidden className="hidden h-[26px] w-px bg-line-strong tablet:block" />

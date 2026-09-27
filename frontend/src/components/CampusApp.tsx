@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence } from "framer-motion";
 
 import { AccountPanel, type AccountView } from "@/components/account/AccountPanel";
@@ -95,7 +95,18 @@ interface CampusAppProps {
 export function CampusApp({ initialEventId }: CampusAppProps) {
   const { user, authFetch } = useAuth();
   const state = useCampusState(initialEventId, user?.id, user?.name);
-  const notices = useCampusNotices(user?.id, state.events, state.going);
+  const deliverPhoton = useCallback(
+    (title: string, body: string) => {
+      if (!user?.photonNotificationsEnabled) return;
+      void authFetch("/api/notices/photon", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, body }),
+      }).catch(() => undefined);
+    },
+    [authFetch, user?.photonNotificationsEnabled],
+  );
+  const notices = useCampusNotices(user?.id, state.events, state.going, deliverPhoton);
   const history = useEventHistory(user?.id, state.events, state.going);
   const [accountView, setAccountView] = useState<AccountView | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -236,6 +247,7 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
           mapRef.current?.centerOn({ x: event.mapX, y: event.mapY });
         }}
         onOpenAccount={setAccountView}
+        photonEnabled={user?.photonNotificationsEnabled}
         onNotificationAction={(action) => {
           if (action === "freeFood") {
             state.setSidebarFilter("all");

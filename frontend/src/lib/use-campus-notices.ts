@@ -73,6 +73,7 @@ export function useCampusNotices(
   userId: number | undefined,
   events: CampusEvent[],
   going: Set<string>,
+  deliverPhoton?: (title: string, body: string) => void,
 ) {
   const [notices, setNotices] = useState<CampusNotice[]>([]);
   const [seenAt, setSeenAt] = useState(0);
@@ -115,7 +116,8 @@ export function useCampusNotices(
       time: "Just now",
     };
     setNotices((prev) => [next, ...prev.filter((item) => item.id !== next.id)].slice(0, 40));
-  }, []);
+    deliverPhoton?.(next.title, next.body);
+  }, [deliverPhoton]);
 
   const notifyJoin = useCallback(
     (event: CampusEvent) => {
