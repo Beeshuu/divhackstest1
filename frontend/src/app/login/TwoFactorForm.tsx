@@ -2,9 +2,10 @@
 
 import { useCallback, useState, type FormEvent } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight, MessageCircle, ShieldCheck } from "lucide-react";
+import { ArrowRight, ShieldCheck } from "lucide-react";
 
 import { useAuth, type AuthChallenge } from "@/lib/auth";
+import { PhotonCodeNotice } from "./PhotonCodeNotice";
 import { useChallengePoll } from "./use-challenge-poll";
 
 const FIELD =
@@ -51,32 +52,7 @@ export function TwoFactorForm({
       className="space-y-4"
       onSubmit={submit}
     >
-      {challenge.channel === "imessage" ? (
-        <div className="flex items-start gap-3 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3">
-          <MessageCircle className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
-          <p className="text-sm font-medium text-blue-800">
-            Photon just iMessaged a code to <span className="font-bold">{challenge.phoneHint}</span>.
-            Enter it here, or reply to that chat.
-          </p>
-        </div>
-      ) : (
-        challenge.demoCode && (
-          <div className="flex items-start gap-3 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3">
-            <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
-            <p className="text-sm font-medium text-blue-800">
-              Photon isn’t connected yet. Add{" "}
-              <span className="font-bold">SPECTRUM_PROJECT_ID</span> and{" "}
-              <span className="font-bold">SPECTRUM_PROJECT_SECRET</span> from{" "}
-              <a href="https://app.photon.codes" target="_blank" rel="noreferrer" className="underline">
-                the Photon dashboard
-              </a>
-              , restart the server, and the code will iMessage instead. Demo code for{" "}
-              <span className="font-bold">{challenge.phoneHint}</span>:{" "}
-              <span className="font-bold tracking-[0.18em]">{challenge.demoCode}</span>
-            </p>
-          </div>
-        )
-      )}
+      <PhotonCodeNotice {...challenge} />
 
       <div className="space-y-1">
         <label htmlFor="two-factor-code" className="text-sm font-semibold text-slate-700 ml-1">

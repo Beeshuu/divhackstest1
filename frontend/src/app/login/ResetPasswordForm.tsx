@@ -2,9 +2,10 @@
 
 import { useCallback, useState, type FormEvent } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowRight, Eye, EyeOff, Lock, MessageCircle, Phone, ShieldCheck } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Lock, Phone, ShieldCheck } from "lucide-react";
 
 import { useAuth } from "@/lib/auth";
+import { PhotonCodeNotice } from "./PhotonCodeNotice";
 import { useChallengePoll } from "./use-challenge-poll";
 
 const FIELD =
@@ -22,7 +23,10 @@ export function ResetPasswordForm({
   const [phone, setPhone] = useState(initialPhone);
   const [challengeId, setChallengeId] = useState("");
   const [phoneHint, setPhoneHint] = useState("");
+  const [e164, setE164] = useState<string | undefined>();
   const [channel, setChannel] = useState("demo");
+  const [connected, setConnected] = useState(false);
+  const [sendError, setSendError] = useState<string | undefined>();
   const [demoCode, setDemoCode] = useState<string | undefined>();
   const [inboundVerified, setInboundVerified] = useState(false);
   const [code, setCode] = useState("");
@@ -41,7 +45,10 @@ export function ResetPasswordForm({
       const result = await requestPasswordReset(phone);
       setChallengeId(result.challengeId);
       setPhoneHint(result.phoneHint);
+      setE164(result.e164);
       setChannel(result.channel);
+      setConnected(Boolean(result.connected));
+      setSendError(result.sendError);
       setDemoCode(result.demoCode);
       setInboundVerified(false);
       setCode("");
@@ -139,33 +146,15 @@ export function ResetPasswordForm({
           className="space-y-4"
           onSubmit={submitNewPassword}
         >
-          {channel === "imessage" ? (
-            <div className="flex items-start gap-3 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3">
-              <MessageCircle className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
-              <p className="text-sm font-medium text-blue-800">
-                {inboundVerified
-                  ? "Photon confirmed your iMessage reply. Set a new password to finish."
-                  : `Photon iMessaged a reset code to ${phoneHint || "your phone"}. Enter it here, or reply in that chat.`}
-              </p>
-            </div>
-          ) : (
-            demoCode && (
-              <div className="flex items-start gap-3 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3">
-                <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
-                <p className="text-sm font-medium text-blue-800">
-                  Photon isn’t connected yet. Add{" "}
-                  <span className="font-bold">SPECTRUM_PROJECT_ID</span> and{" "}
-                  <span className="font-bold">SPECTRUM_PROJECT_SECRET</span> from{" "}
-                  <a href="https://app.photon.codes" target="_blank" rel="noreferrer" className="underline">
-                    the Photon dashboard
-                  </a>
-                  , restart the server, and the code will iMessage instead. Demo code for{" "}
-                  <span className="font-bold">{phoneHint || "your phone"}</span>:{" "}
-                  <span className="font-bold tracking-[0.18em]">{demoCode}</span>
-                </p>
-              </div>
-            )
-          )}
+          <PhotonCodeNotice
+            channel={channel}
+            phoneHint={phoneHint}
+            e164={e164}
+            demoCode={demoCode}
+            connected={connected}
+            sendError={sendError}
+            inboundVerified={inboundVerified}
+          />
 
           <div className="space-y-1">
             <label htmlFor="reset-code" className="text-sm font-semibold text-slate-700 ml-1">
@@ -244,7 +233,10 @@ export function ResetPasswordForm({
                 const result = await requestPasswordReset(phone);
                 setChallengeId(result.challengeId);
                 setPhoneHint(result.phoneHint);
+                setE164(result.e164);
                 setChannel(result.channel);
+                setConnected(Boolean(result.connected));
+                setSendError(result.sendError);
                 setDemoCode(result.demoCode);
                 setInboundVerified(false);
                 setCode("");

@@ -44,7 +44,10 @@ export type AuthStatus = "loading" | "authenticated" | "anonymous";
 export interface AuthChallenge {
   challengeId: string;
   phoneHint: string;
+  e164?: string;
   channel: "imessage" | "demo" | string;
+  connected?: boolean;
+  sendError?: string;
   demoCode?: string;
 }
 
@@ -166,7 +169,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         challenge: {
           challengeId: String(body.challengeId ?? ""),
           phoneHint: typeof body.phoneHint === "string" ? body.phoneHint : "your phone",
+          e164: typeof body.e164 === "string" ? body.e164 : undefined,
           channel: typeof body.channel === "string" ? body.channel : "demo",
+          connected: Boolean(body.connected),
+          sendError: typeof body.sendError === "string" ? body.sendError : undefined,
           demoCode: typeof body.demoCode === "string" ? body.demoCode : undefined,
         },
       };
@@ -200,7 +206,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return {
       challengeId: String(body.challengeId ?? ""),
       phoneHint: typeof body.phoneHint === "string" ? body.phoneHint : "your phone",
+      e164: typeof body.e164 === "string" ? body.e164 : undefined,
       channel: typeof body.channel === "string" ? body.channel : "demo",
+      connected: Boolean(body.connected),
+      sendError: typeof body.sendError === "string" ? body.sendError : undefined,
       demoCode: typeof body.demoCode === "string" ? body.demoCode : undefined,
     };
   }, []);

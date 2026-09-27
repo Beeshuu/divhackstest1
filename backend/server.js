@@ -14,6 +14,7 @@ import {
   sendSpectrumWelcome,
   setInboundHandler,
   spectrumConfigured,
+  toE164,
 } from './spectrum-agent.js';
 
 const root = fileURLToPath(new URL('.', import.meta.url));
@@ -275,10 +276,12 @@ async function issueChallenge(account, purpose) {
   );
 
   let channel = 'demo';
+  let sendError;
   try {
     const sent = await sendSpectrumCode(account.phone, code, purpose, account.name);
     if (sent.delivered) channel = sent.channel;
   } catch (error) {
+    sendError = error.message;
     console.error('Photon Spectrum could not send a code:', error.message);
   }
 
@@ -289,8 +292,11 @@ async function issueChallenge(account, purpose) {
   return {
     challengeId: token,
     phoneHint: maskPhone(account.phone),
+    e164: toE164(account.phone) || undefined,
     expiresInMinutes: 10,
     channel,
+    connected: spectrumConfigured(),
+    sendError,
     demoCode: channel === 'demo' ? code : undefined,
   };
 }
