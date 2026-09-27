@@ -1,8 +1,8 @@
 /**
- * Locally drawn hero illustration for the Free Pizza event.
+ * Locally drawn hero illustration for official-calendar Free Food listings.
  *
- * Deliberately a flat SVG composition rather than a photograph: the prototype
- * has to render with zero network image requests.
+ * Campus-neutral: no school name, crest, or banner copy. Flat SVG so the
+ * drawer does not fetch a remote photo.
  */
 export function EventHeroArt() {
   return (
@@ -11,7 +11,7 @@ export function EventHeroArt() {
       preserveAspectRatio="xMidYMid slice"
       className="h-full w-full"
       role="img"
-      aria-label="Illustration of a pizza box in front of a Columbia University banner"
+      aria-label="Illustration of a pizza box at a campus free food event"
     >
       <defs>
         <linearGradient id="hero-room" x1="0" y1="0" x2="0.15" y2="1">
@@ -19,9 +19,9 @@ export function EventHeroArt() {
           <stop offset="0.55" stopColor="#C9B9A4" />
           <stop offset="1" stopColor="#A8927B" />
         </linearGradient>
-        <linearGradient id="hero-banner" x1="0" y1="0" x2="0.35" y2="1">
-          <stop offset="0" stopColor="#153B6E" />
-          <stop offset="1" stopColor="#06203F" />
+        <linearGradient id="hero-window" x1="0" y1="0" x2="0.2" y2="1">
+          <stop offset="0" stopColor="#8EB4D8" />
+          <stop offset="1" stopColor="#4E7AA8" />
         </linearGradient>
         <linearGradient id="hero-crust" x1="0" y1="0" x2="0.2" y2="1">
           <stop offset="0" stopColor="#EFBC70" />
@@ -45,7 +45,7 @@ export function EventHeroArt() {
 
       <rect width="386" height="186" fill="url(#hero-room)" />
 
-      {/* Out-of-focus interior behind the banner */}
+      {/* Out-of-focus interior behind the window */}
       <g filter="url(#hero-blur)" opacity="0.85">
         <rect x="-20" y="-20" width="150" height="150" rx="24" fill="#EAE1D2" />
         <circle cx="60" cy="16" r="40" fill="#D6CCBB" />
@@ -54,41 +54,18 @@ export function EventHeroArt() {
         <rect x="-20" y="108" width="426" height="100" fill="#A18C76" />
       </g>
 
-      {/* Columbia banner */}
+      {/* Campus-neutral window — no school name or crest */}
       <g transform="rotate(-1 286 66)">
-        <rect x="206" y="2" width="164" height="124" rx="2" fill="url(#hero-banner)" />
-        <rect x="206" y="2" width="164" height="124" rx="2" fill="#061C39" opacity="0.2" />
-        <g fill="#E8EFF9" opacity="0.92">
-          {/* Simplified academic crown, not the official crest */}
-          <path d="M275 36h26l-3.3 12h-19.4z" />
-          <path d="M275 36l-4.7-8.8 6.6 2.8 4.8-7.6 4.8 7.6 6.6-2.8-4.7 8.8z" />
-          <circle cx="269.6" cy="26" r="2" />
-          <circle cx="281" cy="20.4" r="2" />
-          <circle cx="291" cy="20.4" r="2" />
-          <circle cx="302.4" cy="26" r="2" />
+        <rect x="206" y="2" width="164" height="124" rx="4" fill="#E8DCC8" />
+        <rect x="214" y="10" width="148" height="108" rx="2" fill="url(#hero-window)" />
+        <path d="M214 64h148" stroke="#E8DCC8" strokeWidth="4" />
+        <path d="M288 10v108" stroke="#E8DCC8" strokeWidth="4" />
+        <circle cx="246" cy="38" r="16" fill="#F4E7C8" opacity="0.55" />
+        <circle cx="332" cy="28" r="10" fill="#F7F1E4" opacity="0.4" />
+        <g fill="#6F9A5A" opacity="0.7">
+          <ellipse cx="258" cy="108" rx="22" ry="10" />
+          <ellipse cx="318" cy="108" rx="18" ry="8" />
         </g>
-        <text
-          x="288"
-          y="74"
-          textAnchor="middle"
-          fill="#EEF3FB"
-          fontFamily="Georgia, 'Times New Roman', serif"
-          fontSize="18"
-          letterSpacing="1.5"
-        >
-          COLUMBIA
-        </text>
-        <text
-          x="288"
-          y="96"
-          textAnchor="middle"
-          fill="#EEF3FB"
-          fontFamily="Georgia, 'Times New Roman', serif"
-          fontSize="18"
-          letterSpacing="1.5"
-        >
-          UNIVERSITY
-        </text>
       </g>
 
       {/* Open pizza box */}
