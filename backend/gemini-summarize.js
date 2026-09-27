@@ -12,7 +12,10 @@ const frontendPort = Number(process.env.FRONTEND_PORT) || 3001;
 const cacheFile = join(dirname(fileURLToPath(import.meta.url)), "data", "ulife-summaries.json");
 const GEMINI_TIMEOUT_MS = 12_000;
 const CHUNK = 16;
-const SUMMARY_VERSION = "4";
+const SUMMARY_VERSION = "5";
+const MAX_SUMMARY = 520;
+const MIN_SENTENCES = 2;
+const MAX_SENTENCES = 3;
 
 function fingerprint(id, text) {
   return `${SUMMARY_VERSION}:${id}:${createHash("sha1").update(text).digest("hex").slice(0, 12)}`;
@@ -74,13 +77,26 @@ function sentencesOf(text) {
 }
 
 function fitSentences(...parts) {
+  const sentences = parts.filter(Boolean).slice(0, MAX_SENTENCES);
   let out = "";
-  for (const part of parts.filter(Boolean)) {
+  let count = 0;
+  for (const part of sentences) {
     const next = out ? `${out} ${part}` : part;
-    if (next.length > 280) return out || clip(part, 280);
+    if (next.length > MAX_SUMMARY) {
+      if (count >= MIN_SENTENCES) return out;
+      return out || clip(part, MAX_SUMMARY);
+    }
     out = next;
+    count += 1;
   }
   return out;
+}
+
+/** Keep Gemini blurbs that are 2-3 sentences; otherwise fall back. */
+export function normalizeGeminiSummary(text) {
+  const parts = sentencesOf(text).slice(0, MAX_SENTENCES);
+  if (parts.length < MIN_SENTENCES) return "";
+  return fitSentences(...parts);
 }
 
 /** Short readable blurb when Gemini is unavailable. */
@@ -115,7 +131,9 @@ async function askGemini(items) {
       const body = await response.json();
       if (body?.summaries && typeof body.summaries === "object") {
         for (const [id, text] of Object.entries(body.summaries)) {
-          if (typeof text === "string" && text.trim()) summaries[id] = text.trim();
+          if (typeof text !== "string") continue;
+          const summary = normalizeGeminiSummary(text);
+          if (summary) summaries[id] = summary;
         }
       }
     } catch {

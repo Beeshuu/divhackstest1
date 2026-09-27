@@ -12,9 +12,10 @@ When you mention events, end with a JSON line:
 MATCHES: ["event-id-1"]
 If nothing matches, MATCHES: []`;
 
-const SUMMARIZE_INSTRUCTION = `You write short campus-map blurbs for Columbia University Life events.
-Each summary is 1-2 plain sentences. No HTML, markdown, bullet points, or URLs.
-Keep what the event is and who it is for. Do not invent details.`;
+const SUMMARIZE_INSTRUCTION = `You write campus-map blurbs for Columbia University Life events.
+Each summary MUST be 2 or 3 complete sentences — never 1, never more than 3.
+Cover what the event is, who it is for, and one useful detail from the listing (topic, drop-in, time window, or how to join).
+No HTML, markdown, bullet points, or URLs. Do not invent details.`;
 
 type SummarizeItem = { id: string; title: string; description: string };
 
@@ -93,7 +94,8 @@ async function summarizeEvents(key: string, items: SummarizeItem[]) {
   });
 
   const prompt = [
-    "Summarize each University Life event listing.",
+    "Summarize each University Life event listing in 2-3 sentences.",
+    "Every summary must contain 2 or 3 sentences. Do not return a single sentence.",
     "Return JSON only, either {\"id\":\"summary\"} or [{\"id\":\"...\",\"summary\":\"...\"}].",
     JSON.stringify(items),
   ].join("\n");

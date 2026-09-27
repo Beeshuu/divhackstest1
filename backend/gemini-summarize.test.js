@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { cleanListing, fallbackSummary } from "./gemini-summarize.js";
+import { cleanListing, fallbackSummary, normalizeGeminiSummary } from "./gemini-summarize.js";
 
 test("strips encoded University Life HTML", () => {
   const cleaned = cleanListing(
@@ -32,10 +32,23 @@ test("uses talk title plus abstract for long colloquia", () => {
   assert.doesNotMatch(summary, /Speaker:/);
 });
 
-test("keeps a full sentence instead of clipping mid-word", () => {
+test("keeps two to three sentences from a longer listing", () => {
   const summary = fallbackSummary(
-    "Title: Physics understanding of instabilities and turbulence for stellarator optimisation Abstract: Stellarators, the twisted siblings of tokamaks, have historically suffered from confining the heat of the plasma insufficiently compared with tokamaks and were therefore considered to be less attractive. A second sentence should be dropped if it would clip.",
+    "Title: Physics understanding of instabilities and turbulence for stellarator optimisation Abstract: Stellarators, the twisted siblings of tokamaks, have historically suffered from confining heat insufficiently. This talk explains how turbulence models guide stellarator optimisation. A fourth leftover sentence should be dropped.",
   );
-  assert.doesNotMatch(summary, /…|second sentence/);
   assert.match(summary, /optimisation\./);
+  assert.match(summary, /turbulence models/);
+  assert.doesNotMatch(summary, /fourth leftover|…/);
+  assert.equal(summary.match(/[.!?](?:\s|$)/g)?.length, 3);
+});
+
+test("accepts only 2-3 sentence Gemini blurbs", () => {
+  assert.equal(normalizeGeminiSummary("Just one sentence."), "");
+  const two = normalizeGeminiSummary("Drop by Butler for research help. Staff are there most weekday afternoons.");
+  assert.equal(two.match(/[.!?](?:\s|$)/g)?.length, 2);
+  const four = normalizeGeminiSummary(
+    "First sentence here. Second sentence here. Third sentence here. Fourth sentence must go.",
+  );
+  assert.equal(four.match(/[.!?](?:\s|$)/g)?.length, 3);
+  assert.doesNotMatch(four, /Fourth sentence/);
 });
