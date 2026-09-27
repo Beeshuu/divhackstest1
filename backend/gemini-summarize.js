@@ -12,7 +12,7 @@ const frontendPort = Number(process.env.FRONTEND_PORT) || 3001;
 const cacheFile = join(dirname(fileURLToPath(import.meta.url)), "data", "ulife-summaries.json");
 const GEMINI_TIMEOUT_MS = 12_000;
 const CHUNK = 16;
-const SUMMARY_VERSION = "2";
+const SUMMARY_VERSION = "4";
 
 function fingerprint(id, text) {
   return `${SUMMARY_VERSION}:${id}:${createHash("sha1").update(text).digest("hex").slice(0, 12)}`;
@@ -67,11 +67,20 @@ function clip(text, max) {
   return `${(at > 80 ? cut.slice(0, at) : cut).trim()}…`;
 }
 
-function firstSentences(text, count) {
+function sentencesOf(text) {
   const cleaned = text.replace(/\s+/g, " ").trim();
   const parts = cleaned.match(/[^.!?]+[.!?]+(?:\s|$)/g);
-  if (!parts) return clip(cleaned, 220);
-  return clip(parts.slice(0, count).join(" ").replace(/\s+/g, " ").trim(), 280);
+  return (parts ?? [cleaned]).map((part) => part.replace(/\s+/g, " ").trim()).filter(Boolean);
+}
+
+function fitSentences(...parts) {
+  let out = "";
+  for (const part of parts.filter(Boolean)) {
+    const next = out ? `${out} ${part}` : part;
+    if (next.length > 280) return out || clip(part, 280);
+    out = next;
+  }
+  return out;
 }
 
 /** Short readable blurb when Gemini is unavailable. */
@@ -81,14 +90,11 @@ export function fallbackSummary(raw) {
   const abstract = text.match(/Abstract:\s*([\s\S]+)/i);
   const talkTitle = text.match(/Title:\s*([\s\S]+?)(?:Abstract:|$)/i);
   if (abstract) {
-    const gist = firstSentences(abstract[1], 2);
     const heading = talkTitle?.[1]?.replace(/\s+/g, " ").trim();
-    if (heading && heading.length < 140) {
-      return clip(`${heading.replace(/[.]$/, "")}. ${gist}`, 280);
-    }
-    return gist;
+    const title = heading && heading.length < 140 ? `${heading.replace(/[.]$/, "")}.` : "";
+    return fitSentences(title, ...sentencesOf(abstract[1])) || "Listed on University Life.";
   }
-  return firstSentences(text, 2) || "Listed on University Life.";
+  return fitSentences(...sentencesOf(text)) || "Listed on University Life.";
 }
 
 async function askGemini(items) {

@@ -31,3 +31,11 @@ test("uses talk title plus abstract for long colloquia", () => {
   assert.match(summary, /stellarator/i);
   assert.doesNotMatch(summary, /Speaker:/);
 });
+
+test("keeps a full sentence instead of clipping mid-word", () => {
+  const summary = fallbackSummary(
+    "Title: Physics understanding of instabilities and turbulence for stellarator optimisation Abstract: Stellarators, the twisted siblings of tokamaks, have historically suffered from confining the heat of the plasma insufficiently compared with tokamaks and were therefore considered to be less attractive. A second sentence should be dropped if it would clip.",
+  );
+  assert.doesNotMatch(summary, /…|second sentence/);
+  assert.match(summary, /optimisation\./);
+});
