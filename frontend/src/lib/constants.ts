@@ -52,25 +52,3 @@ export const MARKER_PALETTE: Record<MarkerColor, CategoryPalette> = {
   teal: { solid: "#2FB7C9", soft: "#DDF2F5", text: "#1B96A7" },
 };
 
-/** Building and street labels drawn over the placeholder campus map. */
-export const MAP_LABELS = {
-  buildings: [
-    { label: "Lerner Hall", x: 53.3, y: 24.6 },
-    { label: "Schermerhorn\nHall", x: 28.4, y: 33.4 },
-    { label: "Uris Hall", x: 77.6, y: 36.2 },
-    { label: "Butler Library", x: 50.4, y: 45.2 },
-    { label: "Low Steps", x: 49.4, y: 55.2 },
-    { label: "Alma Mater", x: 47.6, y: 68.2 },
-    { label: "Hamilton\nHall", x: 23.2, y: 66.6 },
-    { label: "Dodge Fitness\nCenter", x: 72.6, y: 67.6 },
-    { label: "South Field", x: 46.4, y: 77.2 },
-  ],
-  streets: [
-    { label: "W 116th St", x: 32.8, y: 11.2, rotate: 0 },
-    { label: "W 115th St", x: 6.4, y: 33.4, rotate: 0 },
-    { label: "W 114th St", x: 5.8, y: 58.2, rotate: 0 },
-    { label: "W 113th St", x: 43.2, y: 86.0, rotate: 0 },
-    { label: "Broadway", x: 12.2, y: 43.0, rotate: 90 },
-    { label: "Amsterdam Ave", x: 92.2, y: 37.0, rotate: 90 },
-  ],
-} as const;
