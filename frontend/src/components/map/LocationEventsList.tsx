@@ -1,15 +1,19 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { CalendarDays, MapPin } from "lucide-react";
+import { CalendarDays, Check, MapPin, X } from "lucide-react";
 
 import { CategoryGlyph } from "@/components/icons/CategoryIcons";
+import { cn } from "@/lib/utils";
 import type { CampusEvent, SidebarFilter } from "@/types/event";
 
 interface LocationEventsListProps {
   filter: SidebarFilter;
   events: CampusEvent[];
   onSelect: (event: CampusEvent) => void;
+  goingIds?: Set<string>;
+  onAccept?: (event: CampusEvent) => void;
+  onReject?: (event: CampusEvent) => void;
 }
 
 const COPY: Partial<Record<SidebarFilter, { title: string; empty: string; source: string }>> = {
@@ -30,10 +34,21 @@ const COPY: Partial<Record<SidebarFilter, { title: string; empty: string; source
   },
 };
 
+const ACTION =
+  "grid h-8 w-8 shrink-0 place-items-center rounded-full border transition-colors duration-150";
+
 /** List that replaces map pins when TBD or Remote is selected. */
-export function LocationEventsList({ filter, events, onSelect }: LocationEventsListProps) {
+export function LocationEventsList({
+  filter,
+  events,
+  onSelect,
+  goingIds,
+  onAccept,
+  onReject,
+}: LocationEventsListProps) {
   const copy = COPY[filter];
   if (!copy) return null;
+  const showActions = filter === "userLed" && (onAccept || onReject);
 
   return (
     <AnimatePresence>
@@ -59,12 +74,15 @@ export function LocationEventsList({ filter, events, onSelect }: LocationEventsL
           {events.length === 0 ? (
             <li className="px-3 py-8 text-center text-[13.5px] font-medium text-muted">{copy.empty}</li>
           ) : (
-            events.map((event) => (
+            events.map((event) => {
+              const accepted = goingIds?.has(event.id) ?? false;
+              return (
               <li key={event.id}>
+                <div className="flex items-start gap-1 rounded-[12px] pr-1.5 transition-colors hover:bg-brand-tint">
                 <button
                   type="button"
                   onClick={() => onSelect(event)}
-                  className="flex w-full items-start gap-3 rounded-[12px] px-3 py-2.5 text-left transition-colors hover:bg-brand-tint"
+                  className="flex min-w-0 flex-1 items-start gap-3 rounded-[12px] px-3 py-2.5 text-left"
                 >
                   <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-field">
                     <CategoryGlyph category={event.category} size={17} />
@@ -86,8 +104,46 @@ export function LocationEventsList({ filter, events, onSelect }: LocationEventsL
                     </span>
                   </span>
                 </button>
+                {showActions && (
+                  <div className="flex shrink-0 items-center gap-1.5 pt-3 pr-1">
+                    {onAccept && (
+                      <button
+                        type="button"
+                        aria-label={accepted ? `You're going to ${event.title}` : `Accept ${event.title}`}
+                        aria-pressed={accepted}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!accepted) onAccept(event);
+                        }}
+                        className={cn(
+                          ACTION,
+                          accepted
+                            ? "border-brand bg-brand text-white"
+                            : "border-line bg-white text-brand hover:border-brand/40 hover:bg-brand-tint",
+                        )}
+                      >
+                        <Check size={15} strokeWidth={2.8} />
+                      </button>
+                    )}
+                    {onReject && (
+                      <button
+                        type="button"
+                        aria-label={`Reject ${event.title}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onReject(event);
+                        }}
+                        className={`${ACTION} border-line bg-white text-[#8A96AB] hover:border-[#F5453A]/30 hover:bg-[#FEF2F2] hover:text-[#F5453A]`}
+                      >
+                        <X size={15} strokeWidth={2.8} />
+                      </button>
+                    )}
+                  </div>
+                )}
+                </div>
               </li>
-            ))
+              );
+            })
           )}
         </ul>
       </motion.div>

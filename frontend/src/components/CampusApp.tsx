@@ -374,6 +374,26 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
               filter={state.sidebarFilter}
               events={state.visibleEvents}
               onSelect={openEvent}
+              goingIds={state.going}
+              onAccept={
+                state.sidebarFilter === "userLed"
+                  ? (event) => {
+                      if (state.going.has(event.id)) return;
+                      state.toggleGoing(event.id);
+                      notices.notifyJoin(event);
+                      state.showToast(`You're going to ${event.title}. We'll remind you 30 minutes before it starts.`);
+                    }
+                  : undefined
+              }
+              onReject={
+                state.sidebarFilter === "userLed"
+                  ? (event) => {
+                      state.rejectEvent(event.id);
+                      if (state.selectedEvent?.id === event.id) state.closeDrawer();
+                      state.showToast("This event won’t show on your map unless you search for it.");
+                    }
+                  : undefined
+              }
             />
           )}
           <MapEmptyState
