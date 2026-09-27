@@ -1,7 +1,7 @@
 "use client";
 
-import { useImperativeHandle, type Ref } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useImperativeHandle, useState, type Ref } from "react";
+import { motion, useMotionValueEvent } from "framer-motion";
 import { Crown } from "lucide-react";
 
 import { CampusMapArt } from "./CampusMapArt";
@@ -53,9 +53,18 @@ export function CampusMapPlaceholder({
   onPickPoint,
   draftPin,
 }: CampusMapPlaceholderProps) {
-  const { viewportRef, paneRef, pointerHandlers, x, y, scale, inverseScale, layer, isDragging, zoomBy, centerOn, reset } =
+  const { viewportRef, paneRef, pointerHandlers, x, y, scale, inverseScale, layer, homeScale, isDragging, zoomBy, centerOn, reset } =
     useMapView(onPickPoint);
   const picking = Boolean(onPickPoint);
+  const [showDetail, setShowDetail] = useState(false);
+
+  useEffect(() => {
+    setShowDetail(scale.get() > homeScale * 1.16);
+  }, [homeScale, scale]);
+
+  useMotionValueEvent(scale, "change", (value) => {
+    setShowDetail(value > homeScale * 1.16);
+  });
 
   useImperativeHandle(viewRef, () => ({ centerOn, reset }), [centerOn, reset]);
 
@@ -78,39 +87,52 @@ export function CampusMapPlaceholder({
         >
           <CampusMapArt />
 
-          {MAP_LABELS.streets.map((street) => (
-            <MapAnchor key={street.label} x={street.x} y={street.y} inverseScale={inverseScale}>
-              <span
-                className="absolute w-max whitespace-nowrap text-[12.5px] font-medium tracking-[0.01em] text-map-street-label [text-shadow:0_1px_2px_rgba(255,255,255,0.85)]"
-                style={{ transform: `translate(-50%, -50%) rotate(${street.rotate}deg)` }}
-              >
-                {street.label}
-              </span>
-            </MapAnchor>
-          ))}
+          {MAP_LABELS.streets.map((street) =>
+            street.minor && !showDetail ? null : (
+              <MapAnchor key={street.label} x={street.x} y={street.y} inverseScale={inverseScale}>
+                <span
+                  className="absolute w-max whitespace-nowrap text-[10px] font-medium uppercase tracking-[0.18em] text-map-street-label [text-shadow:0_1px_2px_rgba(255,255,255,0.9)]"
+                  style={{ transform: `translate(-50%, -50%) rotate(${street.rotate}deg)` }}
+                >
+                  {street.label}
+                </span>
+              </MapAnchor>
+            ),
+          )}
 
-          {MAP_LABELS.buildings.map((building) => (
-            <MapAnchor key={`${building.label}-${building.x}-${building.y}`} x={building.x} y={building.y} inverseScale={inverseScale}>
-              <span
-                className={cn(
-                  "absolute w-max whitespace-pre-line text-center font-serif font-normal text-map-label [text-shadow:0_1px_3px_rgba(255,255,255,0.95)]",
-                  building.minor ? "text-[12px] leading-[1.15]" : "text-[15px] leading-[1.2]",
-                )}
-                style={{ transform: "translate(-50%, -50%)" }}
+          {MAP_LABELS.buildings.map((building) =>
+            building.minor && !showDetail ? null : (
+              <MapAnchor
+                key={`${building.label}-${building.x}-${building.y}`}
+                x={building.x}
+                y={building.y}
+                inverseScale={inverseScale}
               >
-                {building.label}
-              </span>
-            </MapAnchor>
-          ))}
+                <span
+                  className={cn(
+                    "absolute w-max whitespace-nowrap text-center font-serif [text-shadow:0_1px_2px_rgba(255,255,255,0.92)]",
+                    building.minor
+                      ? "text-[11px] font-normal tracking-[0.04em] text-[#6a788e]"
+                      : "text-[13px] font-normal tracking-[0.03em] text-map-label",
+                  )}
+                  style={{ transform: "translate(-50%, -50%)" }}
+                >
+                  {building.label}
+                </span>
+              </MapAnchor>
+            ),
+          )}
 
-          <MapAnchor x={52.4} y={47.8} inverseScale={inverseScale}>
-            <Crown
-              size={19}
-              strokeWidth={2}
-              aria-hidden
-              className="absolute -translate-x-1/2 -translate-y-1/2 text-[#3F6FB5]"
-            />
-          </MapAnchor>
+          {showDetail && (
+            <MapAnchor x={52.4} y={47.8} inverseScale={inverseScale}>
+              <Crown
+                size={14}
+                strokeWidth={1.8}
+                aria-hidden
+                className="absolute -translate-x-1/2 -translate-y-1/2 text-[#6d86ad]"
+              />
+            </MapAnchor>
+          )}
 
           {userPoint && (
             <MapAnchor x={userPoint.x} y={userPoint.y} inverseScale={inverseScale}>

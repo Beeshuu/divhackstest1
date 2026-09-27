@@ -36,6 +36,8 @@ export interface MapView {
   inverseScale: MotionValue<number>;
   /** Drawn size of the campus plan at zoom 1 (contained in the viewport). */
   layer: MapLayerSize;
+  /** Scale used to frame College Walk — detail labels appear above this. */
+  homeScale: number;
   isDragging: boolean;
   zoomBy: (factor: number) => void;
   centerOn: (point: MapPoint, zoom?: number) => void;
@@ -82,6 +84,7 @@ export function useMapView(onTap?: (point: MapPoint) => void): MapView {
   const inverseScale = useTransform(scale, (s) => 1 / s);
   const [isDragging, setIsDragging] = useState(false);
   const [layer, setLayer] = useState<MapLayerSize>({ w: 1, h: 1 });
+  const [homeScale, setHomeScale] = useState(1);
   const layerRef = useRef(layer);
   layerRef.current = layer;
 
@@ -136,6 +139,7 @@ export function useMapView(onTap?: (point: MapPoint) => void): MapView {
       layerRef.current = next;
       setLayer(next);
       const home = fillScale(vw, vh, next);
+      setHomeScale(home);
       const atHome = Math.abs(scale.get() - fillScale(vw, vh, previous)) < 0.04 || scale.get() <= 1.01;
       if (atHome) {
         const frame = framePoint(vw, vh, next, HOME, home);
@@ -304,6 +308,7 @@ export function useMapView(onTap?: (point: MapPoint) => void): MapView {
     scale,
     inverseScale,
     layer,
+    homeScale,
     isDragging,
     zoomBy,
     centerOn,
