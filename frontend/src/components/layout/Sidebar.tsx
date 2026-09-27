@@ -2,7 +2,7 @@
 
 import type { ComponentType } from "react";
 import { motion } from "framer-motion";
-import { Plus, X } from "lucide-react";
+import { MapPinOff, Monitor, Plus, X } from "lucide-react";
 
 import { GeminiSparkle } from "@/components/gemini/GeminiSparkle";
 import {
@@ -47,12 +47,24 @@ interface SidebarProps {
   selected: SidebarFilter;
   onSelect: (filter: SidebarFilter) => void;
   savedCount: number;
+  tbdCount: number;
+  remoteCount: number;
   onPostEvent: () => void;
   onAskGemini: () => void;
 }
 
 /** Category rail: filters the events shown on the map. */
-export function Sidebar({ isOpen, onClose, selected: selectedFilter, onSelect, savedCount, onPostEvent, onAskGemini }: SidebarProps) {
+export function Sidebar({
+  isOpen,
+  onClose,
+  selected: selectedFilter,
+  onSelect,
+  savedCount,
+  tbdCount,
+  remoteCount,
+  onPostEvent,
+  onAskGemini,
+}: SidebarProps) {
   return (
     <aside
       aria-label="Event categories"
@@ -99,6 +111,41 @@ export function Sidebar({ isOpen, onClose, selected: selectedFilter, onSelect, s
           );
         })}
       </nav>
+
+      <div className="mt-4 border-t border-line pt-3" aria-label="Events without a mapped location">
+        <p className="px-[18px] pb-1.5 text-[11.5px] font-bold uppercase tracking-[0.08em] text-faint">
+          Location
+        </p>
+        {(
+          [
+            { label: "TBD locations", filter: "tbd" as const, icon: MapPinOff, count: tbdCount },
+            { label: "Remote", filter: "remote" as const, icon: Monitor, count: remoteCount },
+          ] as const
+        ).map((item) => {
+          const selected = item.filter === selectedFilter;
+          const Icon = item.icon;
+          return (
+            <button
+              key={item.label}
+              type="button"
+              aria-current={selected ? "page" : undefined}
+              onClick={() => onSelect(item.filter)}
+              className={cn(
+                "flex h-[49px] w-full items-center gap-[18px] rounded-[13px] px-[18px] text-left text-[15.5px] transition-colors duration-150 ease-out",
+                selected ? "bg-brand-tint font-bold text-brand" : "font-semibold text-ink hover:bg-[#f0f3f9]",
+              )}
+            >
+              <Icon size={22} strokeWidth={2.1} aria-hidden className="shrink-0" />
+              <span className="truncate">{item.label}</span>
+              {item.count > 0 && (
+                <span className="ml-auto rounded-full bg-brand-tint px-2 py-[1px] text-[12px] font-bold text-brand">
+                  {item.count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
 
       <motion.button
         type="button"

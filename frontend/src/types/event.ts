@@ -61,10 +61,14 @@ export interface CampusEvent {
    * have no public URL until server persistence exists.
    */
   isTemporary?: boolean;
+  /** Live University Life listings: mapped campus pin, TBD, or remote. */
+  locationKind?: "mapped" | "tbd" | "remote";
+  sourceUrl?: string;
+  source?: "university-life";
 }
 
 /** Sidebar selection: a category, every event, or the user's saved events. */
-export type SidebarFilter = "all" | "saved" | EventCategory;
+export type SidebarFilter = "all" | "saved" | "tbd" | "remote" | EventCategory;
 
 /** Single-select view pills floating over the map. */
 export type MapPill = "trending" | "nearMe" | "freeFood";

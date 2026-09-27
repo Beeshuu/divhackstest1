@@ -27,8 +27,9 @@ function matchesQuery(event: CampusEvent, query: string): boolean {
   );
 }
 
-/** Built-in events have a route; session-only events deliberately do not. */
+/** Built-in events have a route; live and session-only events use their source URL. */
 export function eventPath(event: CampusEvent): string | null {
+  if (event.sourceUrl) return event.sourceUrl;
   return event.isTemporary ? null : `/events/${event.id}`;
 }
 
@@ -36,8 +37,9 @@ const APP_TITLE = "Campus Connect — Columbia University";
 
 /** Keeps the address bar and tab title in step with the open event. */
 function syncUrl(event: CampusEvent | null) {
-  const path = event ? eventPath(event) ?? "/" : "/";
-  if (window.location.pathname !== path) window.history.replaceState(null, "", path);
+  const path = event ? eventPath(event) : "/";
+  const internal = path && !path.startsWith("http") ? path : "/";
+  if (window.location.pathname !== internal) window.history.replaceState(null, "", internal);
   document.title = event ? `${event.title} at ${event.locationName} — Campus Connect` : APP_TITLE;
 }
 
@@ -46,6 +48,8 @@ function syncUrl(event: CampusEvent | null) {
  * memory: going/saved/created events reset on refresh by design.
  */
 export function useCampusState(initialEventId?: string) {
+  const [liveEvents, setLiveEvents] = useState<CampusEvent[]>([]);
+  const [liveStatus, setLiveStatus] = useState<"idle" | "ready" | "error">("idle");
   const [createdEvents, setCreatedEvents] = useState<CampusEvent[]>([]);
   const [selectedId, setSelectedId] = useState(initialEventId ?? FEATURED_EVENT_ID);
   const [drawerOpen, setDrawerOpen] = useState(Boolean(initialEventId));
@@ -59,14 +63,43 @@ export function useCampusState(initialEventId?: string) {
   const [toast, setToast] = useState<Toast | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const events = useMemo(() => [...MOCK_EVENTS, ...createdEvents], [createdEvents]);
+  const events = useMemo(
+    () => [...liveEvents, ...MOCK_EVENTS, ...createdEvents],
+    [liveEvents, createdEvents],
+  );
   const selectedEvent = events.find((e) => e.id === selectedId);
+
+  const refreshLiveEvents = useCallback(async () => {
+    try {
+      const response = await fetch("/api/university-life/events");
+      if (!response.ok) throw new Error("Could not refresh University Life events.");
+      const body = await response.json();
+      setLiveEvents(Array.isArray(body.events) ? body.events : []);
+      setLiveStatus("ready");
+    } catch {
+      setLiveStatus((prev) => (prev === "ready" ? "ready" : "error"));
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshLiveEvents();
+    const timer = window.setInterval(() => void refreshLiveEvents(), 3 * 60 * 1000);
+    const onFocus = () => void refreshLiveEvents();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [refreshLiveEvents]);
 
   const visibleEvents = useMemo(
     () =>
       events.filter((event) => {
         if (!matchesQuery(event, query)) return false;
         if (sidebarFilter === "saved" && !saved.has(event.id)) return false;
+        if (sidebarFilter === "tbd") return event.locationKind === "tbd";
+        if (sidebarFilter === "remote") return event.locationKind === "remote";
+        if (event.locationKind === "tbd" || event.locationKind === "remote") return false;
         if (sidebarFilter !== "all" && sidebarFilter !== "saved" && event.category !== sidebarFilter)
           return false;
         if (mapPill === "freeFood" && event.category !== "Free Food") return false;
@@ -182,6 +215,10 @@ export function useCampusState(initialEventId?: string) {
     toast,
     showToast,
     dismissToast: () => setToast(null),
+    liveStatus,
+    tbdCount: events.filter((event) => event.locationKind === "tbd").length,
+    remoteCount: events.filter((event) => event.locationKind === "remote").length,
+    refreshLiveEvents,
   };
 }
 

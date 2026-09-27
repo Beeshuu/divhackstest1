@@ -16,6 +16,7 @@ import {
 } from "@/components/map/CampusMapPlaceholder";
 import { CampusStats } from "@/components/map/CampusStats";
 import { DirectionsPrompt } from "@/components/map/DirectionsPrompt";
+import { LocationEventsList } from "@/components/map/LocationEventsList";
 import { MapEmptyState } from "@/components/map/MapEmptyState";
 import { MapFilters } from "@/components/map/MapFilters";
 import { MapToast } from "@/components/map/MapToast";
@@ -66,7 +67,7 @@ async function shareEvent(event: CampusEvent, notify: (message: string) => void)
     );
     return;
   }
-  const url = `${window.location.origin}${path}`;
+  const url = path.startsWith("http") ? path : `${window.location.origin}${path}`;
   if (navigator.share) {
     try {
       await navigator.share({ title: event.title, text: `${event.title} at ${event.locationName}`, url });
@@ -232,6 +233,8 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
             setSidebarOpen(false);
           }}
           savedCount={state.saved.size}
+          tbdCount={state.tbdCount}
+          remoteCount={state.remoteCount}
           onPostEvent={openComposer}
           onAskGemini={openGemini}
         />
@@ -248,7 +251,11 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
         <main className="relative min-w-0 flex-1" aria-label="Campus map">
           <CampusMapPlaceholder
             viewRef={mapRef}
-            events={state.visibleEvents}
+            events={
+              state.sidebarFilter === "tbd" || state.sidebarFilter === "remote"
+                ? []
+                : state.visibleEvents
+            }
             selectedEventId={state.drawerOpen && state.selectedEvent ? state.selectedEvent.id : null}
             onSelectEvent={(id) => {
               const event = state.events.find((item) => item.id === id);
@@ -322,8 +329,20 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
               state.setDateFilter("today");
             }}
           />
+          {(state.sidebarFilter === "tbd" || state.sidebarFilter === "remote") && (
+            <LocationEventsList
+              filter={state.sidebarFilter}
+              events={state.visibleEvents}
+              onSelect={openEvent}
+            />
+          )}
           <MapEmptyState
-            visible={state.events.length > 0 && state.visibleEvents.length === 0}
+            visible={
+              state.sidebarFilter !== "tbd" &&
+              state.sidebarFilter !== "remote" &&
+              state.events.length > 0 &&
+              state.visibleEvents.length === 0
+            }
             message={
               state.sidebarFilter === "saved" && !state.query
                 ? "You haven't saved any events yet — use the bookmark on an event."

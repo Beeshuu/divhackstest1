@@ -7,6 +7,7 @@ import {
   Check,
   ChevronRight,
   Clock,
+  ExternalLink,
   Info,
   MapPin,
   Navigation,
@@ -190,6 +191,17 @@ function DrawerCard({
         <p className="mt-[4px] text-[15px] font-bold leading-[1.15] text-ink">
           {event.locationName}
         </p>
+        {event.source === "university-life" && event.sourceUrl && (
+          <a
+            href={event.sourceUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-2 inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand hover:underline"
+          >
+            University Life listing
+            <ExternalLink size={13} strokeWidth={2.3} aria-hidden />
+          </a>
+        )}
 
         <button
           type="button"
