@@ -416,7 +416,7 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
           <AskGeminiPanel
             open={geminiOpen}
             onClose={() => setGeminiOpen(false)}
-            events={state.visibleEvents.length > 0 ? state.visibleEvents : state.events}
+            events={state.events}
             selectedEvent={selected ?? null}
             onSelectEvent={(event) => {
               setGeminiOpen(false);
