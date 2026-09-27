@@ -45,6 +45,8 @@ export interface AuthChallenge {
   challengeId: string;
   phoneHint: string;
   e164?: string;
+  assignedLine?: string;
+  lineLink?: string;
   channel: "imessage" | "demo" | string;
   connected?: boolean;
   sendError?: string;
@@ -170,6 +172,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           challengeId: String(body.challengeId ?? ""),
           phoneHint: typeof body.phoneHint === "string" ? body.phoneHint : "your phone",
           e164: typeof body.e164 === "string" ? body.e164 : undefined,
+          assignedLine: typeof body.assignedLine === "string" ? body.assignedLine : undefined,
+          lineLink: typeof body.lineLink === "string" ? body.lineLink : undefined,
           channel: typeof body.channel === "string" ? body.channel : "demo",
           connected: Boolean(body.connected),
           sendError: typeof body.sendError === "string" ? body.sendError : undefined,
@@ -207,6 +211,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       challengeId: String(body.challengeId ?? ""),
       phoneHint: typeof body.phoneHint === "string" ? body.phoneHint : "your phone",
       e164: typeof body.e164 === "string" ? body.e164 : undefined,
+      assignedLine: typeof body.assignedLine === "string" ? body.assignedLine : undefined,
+      lineLink: typeof body.lineLink === "string" ? body.lineLink : undefined,
       channel: typeof body.channel === "string" ? body.channel : "demo",
       connected: Boolean(body.connected),
       sendError: typeof body.sendError === "string" ? body.sendError : undefined,

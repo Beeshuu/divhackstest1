@@ -10,9 +10,11 @@ import { loadUniversityLifeEvents } from './university-life.js';
 import {
   getSpectrumApp,
   handleSpectrumWebhook,
+  listenSpectrumMessages,
   sendSpectrumCode,
   sendSpectrumWelcome,
   setInboundHandler,
+  setPendingCodeLookup,
   spectrumConfigured,
   toE164,
 } from './spectrum-agent.js';
@@ -106,6 +108,9 @@ if (!existingResetColumns.has('purpose')) {
 }
 if (!existingResetColumns.has('inbound_verified')) {
   db.exec('ALTER TABLE password_resets ADD COLUMN inbound_verified INTEGER NOT NULL DEFAULT 0');
+}
+if (!existingResetColumns.has('code_plain')) {
+  db.exec('ALTER TABLE password_resets ADD COLUMN code_plain TEXT');
 }
 
 // The first release stored only coordinates and a title; the map needs more.
@@ -262,8 +267,8 @@ async function issueChallenge(account, purpose) {
   db.prepare('DELETE FROM password_resets WHERE user_id = ? AND purpose = ?').run(account.id, purpose);
   db.prepare(
     `INSERT INTO password_resets
-      (user_id, phone, code_salt, code_hash, expires_at, created_at, token, purpose, inbound_verified)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+      (user_id, phone, code_salt, code_hash, expires_at, created_at, token, purpose, inbound_verified, code_plain)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?)`,
   ).run(
     account.id,
     account.phone,
@@ -273,13 +278,19 @@ async function issueChallenge(account, purpose) {
     now.toISOString(),
     token,
     purpose,
+    code,
   );
 
   let channel = 'demo';
   let sendError;
+  let assignedLine;
+  let lineLink;
   try {
     const sent = await sendSpectrumCode(account.phone, code, purpose, account.name);
     if (sent.delivered) channel = sent.channel;
+    sendError = sent.sendError;
+    assignedLine = sent.assignedLine;
+    lineLink = sent.lineLink;
   } catch (error) {
     sendError = error.message;
     console.error('Photon Spectrum could not send a code:', error.message);
@@ -297,6 +308,8 @@ async function issueChallenge(account, purpose) {
     channel,
     connected: spectrumConfigured(),
     sendError,
+    assignedLine,
+    lineLink,
     demoCode: channel === 'demo' ? code : undefined,
   };
 }
@@ -367,6 +380,22 @@ setInboundHandler(({ phone, code }) => {
   } catch {
     return 'unknown';
   }
+});
+
+setPendingCodeLookup(({ phone }) => {
+  const account = findUserByPhone(phone);
+  if (!account) return null;
+  const row = db
+    .prepare(
+      `SELECT * FROM password_resets WHERE user_id = ? ORDER BY created_at DESC LIMIT 1`,
+    )
+    .get(account.id);
+  if (!row || !row.code_plain) return null;
+  if (new Date(row.expires_at).getTime() <= Date.now()) return null;
+  return {
+    code: row.code_plain,
+    kind: row.purpose === 'login_2fa' ? 'sign-in' : 'password reset',
+  };
 });
 
 function startSession(userId) {
@@ -758,7 +787,7 @@ app.use((request, response) => {
 
 const server = app.listen(port, '0.0.0.0', () => {
   console.log(`Campus Connect is running at http://localhost:${port}`);
-  void getSpectrumApp();
+  void getSpectrumApp().then(() => listenSpectrumMessages());
 });
 
 server.on('upgrade', (request, socket, head) => {
