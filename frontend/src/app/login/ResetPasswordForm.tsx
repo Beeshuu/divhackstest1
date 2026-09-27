@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useCallback, useState, type FormEvent } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowRight, Eye, EyeOff, Lock, Phone, ShieldCheck } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Lock, MessageCircle, Phone, ShieldCheck } from "lucide-react";
 
 import { useAuth } from "@/lib/auth";
+import { useChallengePoll } from "./use-challenge-poll";
 
 const FIELD =
   "w-full bg-white border border-slate-200 rounded-2xl py-3.5 pl-12 pr-4 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all shadow-sm";
@@ -19,8 +20,11 @@ export function ResetPasswordForm({
   const { requestPasswordReset, resetPassword } = useAuth();
   const [phase, setPhase] = useState<"phone" | "code">("phone");
   const [phone, setPhone] = useState(initialPhone);
+  const [challengeId, setChallengeId] = useState("");
   const [phoneHint, setPhoneHint] = useState("");
+  const [channel, setChannel] = useState("demo");
   const [demoCode, setDemoCode] = useState<string | undefined>();
+  const [inboundVerified, setInboundVerified] = useState(false);
   const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -35,8 +39,11 @@ export function ResetPasswordForm({
     setPending(true);
     try {
       const result = await requestPasswordReset(phone);
+      setChallengeId(result.challengeId);
       setPhoneHint(result.phoneHint);
+      setChannel(result.channel);
       setDemoCode(result.demoCode);
+      setInboundVerified(false);
       setCode("");
       setPhase("code");
     } catch (cause) {
@@ -56,12 +63,21 @@ export function ResetPasswordForm({
     setError(null);
     setPending(true);
     try {
-      await resetPassword(phone, code, password);
+      await resetPassword({
+        phone,
+        challengeId,
+        code,
+        inbound: inboundVerified,
+        newPassword: password,
+      });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not reset your password.");
       setPending(false);
     }
   };
+
+  const markInbound = useCallback(() => setInboundVerified(true), []);
+  useChallengePoll(phase === "code" ? challengeId : null, markInbound);
 
   return (
     <AnimatePresence mode="wait">
@@ -92,7 +108,7 @@ export function ResetPasswordForm({
               />
             </div>
             <p className="text-xs text-slate-400 ml-1 pt-1">
-              We’ll send a 6-digit code to the number on your account.
+              Photon will iMessage a 6-digit code to the number on your account.
             </p>
           </div>
 
@@ -123,15 +139,26 @@ export function ResetPasswordForm({
           className="space-y-4"
           onSubmit={submitNewPassword}
         >
-          {demoCode && (
+          {channel === "imessage" ? (
             <div className="flex items-start gap-3 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3">
-              <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
+              <MessageCircle className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
               <p className="text-sm font-medium text-blue-800">
-                Campus Connect isn’t sending SMS yet, so use this code for{" "}
-                <span className="font-bold">{phoneHint || "your phone"}</span>:{" "}
-                <span className="font-bold tracking-[0.18em]">{demoCode}</span>
+                {inboundVerified
+                  ? "Photon confirmed your iMessage reply. Set a new password to finish."
+                  : `Photon iMessaged a reset code to ${phoneHint || "your phone"}. Enter it here, or reply in that chat.`}
               </p>
             </div>
+          ) : (
+            demoCode && (
+              <div className="flex items-start gap-3 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3">
+                <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
+                <p className="text-sm font-medium text-blue-800">
+                  Photon Spectrum is not connected in this environment, so use this code for{" "}
+                  <span className="font-bold">{phoneHint || "your phone"}</span>:{" "}
+                  <span className="font-bold tracking-[0.18em]">{demoCode}</span>
+                </p>
+              </div>
+            )
           )}
 
           <div className="space-y-1">
@@ -144,7 +171,7 @@ export function ResetPasswordForm({
                 id="reset-code"
                 inputMode="numeric"
                 autoComplete="one-time-code"
-                required
+                required={!inboundVerified}
                 maxLength={6}
                 value={code}
                 onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
@@ -209,8 +236,11 @@ export function ResetPasswordForm({
               setPending(true);
               try {
                 const result = await requestPasswordReset(phone);
+                setChallengeId(result.challengeId);
                 setPhoneHint(result.phoneHint);
+                setChannel(result.channel);
                 setDemoCode(result.demoCode);
+                setInboundVerified(false);
                 setCode("");
               } catch (cause) {
                 setError(cause instanceof Error ? cause.message : "Could not send a reset code.");

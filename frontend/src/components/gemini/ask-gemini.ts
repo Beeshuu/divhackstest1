@@ -149,9 +149,9 @@ export function answerCampusQuestion(
     };
   }
 
-  if (includesAny(query, ["forgot password", "reset password", "reset my password"])) {
+  if (includesAny(query, ["forgot password", "reset password", "reset my password", "two-step", "2fa", "verification", "imessage", "photon"])) {
     return {
-      text: "On Sign In, tap Forgot password? and enter the phone number on your account. Use the 6-digit code to set a new password.",
+      text: "Campus Connect uses Photon Spectrum for codes. Forgot password? and every sign-in send a 6-digit code over iMessage. Enter it in the app, or reply to the iMessage.",
       matches: [],
     };
   }

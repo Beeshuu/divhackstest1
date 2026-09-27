@@ -26,7 +26,7 @@ App guide (use this when they ask how something works):
   Opening an event or tapping I'm Going does not open directions.
 - Saved is the sidebar bookmark list. Profile (avatar) has Going, Hosted, Attended.
   Settings: account info, change password, profile privacy.
-- Forgot password on Sign In sends a 6-digit code to the phone on the account.
+- Forgot password and two-step sign-in send a 6-digit code over Photon iMessage.
 - Categories live in the map All Categories dropdown. Date filter is Today or Any day.
 - The header search finds events, including rejected ones.
 

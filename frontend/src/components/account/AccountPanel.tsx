@@ -442,6 +442,9 @@ function SettingsView() {
 
       <section className="border-t border-line pt-5">
         <h3 className="text-[15px] font-extrabold text-ink">Change password</h3>
+        <p className="mt-1 text-[13px] font-medium text-muted">
+          Sign-in and reset codes arrive over iMessage through Photon Spectrum.
+        </p>
         <form onSubmit={savePassword} className="mt-3 space-y-3">
           <div>
             <label htmlFor="acct-current" className={LABEL}>

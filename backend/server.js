@@ -7,6 +7,14 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { loadUniversityLifeEvents } from './university-life.js';
+import {
+  getSpectrumApp,
+  handleSpectrumWebhook,
+  sendSpectrumCode,
+  sendSpectrumWelcome,
+  setInboundHandler,
+  spectrumConfigured,
+} from './spectrum-agent.js';
 
 const root = fileURLToPath(new URL('.', import.meta.url));
 const dataDirectory = join(root, 'data');
@@ -83,6 +91,18 @@ db.exec(`
     created_at TEXT NOT NULL
   )
 `);
+const existingResetColumns = new Set(
+  db.prepare('PRAGMA table_info(password_resets)').all().map((column) => column.name),
+);
+if (!existingResetColumns.has('token')) {
+  db.exec('ALTER TABLE password_resets ADD COLUMN token TEXT');
+}
+if (!existingResetColumns.has('purpose')) {
+  db.exec("ALTER TABLE password_resets ADD COLUMN purpose TEXT NOT NULL DEFAULT 'password_reset'");
+}
+if (!existingResetColumns.has('inbound_verified')) {
+  db.exec('ALTER TABLE password_resets ADD COLUMN inbound_verified INTEGER NOT NULL DEFAULT 0');
+}
 
 // The first release stored only coordinates and a title; the map needs more.
 const EVENT_COLUMN_ADDITIONS = {
@@ -153,6 +173,11 @@ const demoTitleList = DEMO_EVENT_TITLES.map((title) => `'${title.replaceAll("'",
 db.exec(`DELETE FROM event_attendees WHERE event_id IN (SELECT id FROM events WHERE title IN (${demoTitleList}))`);
 db.exec(`DELETE FROM events WHERE title IN (${demoTitleList})`);
 
+app.post('/api/spectrum/webhook', express.raw({ type: '*/*' }), async (request, response) => {
+  const result = await handleSpectrumWebhook(request.body, request.headers);
+  response.status(result.status).set(result.headers).send(Buffer.from(result.body));
+});
+
 app.use(express.json());
 app.use(express.static(join(root, 'dist')));
 
@@ -201,6 +226,138 @@ function maskPhone(phone) {
   if (digits.length < 4) return 'your phone';
   return `•••• ${digits.slice(-4)}`;
 }
+
+function findAccountByIdentifier(identifier) {
+  const clean = typeof identifier === 'string' ? identifier.trim() : '';
+  if (!clean) return null;
+  return db.prepare('SELECT * FROM users WHERE email = ?').get(clean.toLowerCase()) ?? findUserByPhone(clean);
+}
+
+function latestChallenge(userId, purpose) {
+  if (!userId) return null;
+  return db
+    .prepare(
+      `SELECT * FROM password_resets WHERE user_id = ? AND purpose = ? ORDER BY created_at DESC LIMIT 1`,
+    )
+    .get(userId, purpose);
+}
+
+async function issueChallenge(account, purpose) {
+  const latest = latestChallenge(account.id, purpose);
+  if (latest && Date.now() - new Date(latest.created_at).getTime() < 45_000) {
+    const error = new Error('Wait a moment before requesting another code.');
+    error.status = 429;
+    throw error;
+  }
+
+  const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
+  const { salt, hash } = hashPassword(code);
+  const now = new Date();
+  const token = randomBytes(16).toString('hex');
+  db.prepare('DELETE FROM password_resets WHERE user_id = ? AND purpose = ?').run(account.id, purpose);
+  db.prepare(
+    `INSERT INTO password_resets
+      (user_id, phone, code_salt, code_hash, expires_at, created_at, token, purpose, inbound_verified)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+  ).run(
+    account.id,
+    account.phone,
+    salt,
+    hash,
+    new Date(now.getTime() + 10 * 60 * 1000).toISOString(),
+    now.toISOString(),
+    token,
+    purpose,
+  );
+
+  let channel = 'demo';
+  try {
+    const sent = await sendSpectrumCode(account.phone, code, purpose, account.name);
+    if (sent.delivered) channel = sent.channel;
+  } catch (error) {
+    console.error('Photon Spectrum could not send a code:', error.message);
+  }
+
+  if (channel === 'demo') {
+    console.log(`${purpose} code for ${maskPhone(account.phone)}: ${code}`);
+  }
+
+  return {
+    challengeId: token,
+    phoneHint: maskPhone(account.phone),
+    expiresInMinutes: 10,
+    channel,
+    demoCode: channel === 'demo' ? code : undefined,
+  };
+}
+
+function readChallenge(token, purpose) {
+  if (!token) return null;
+  return db.prepare('SELECT * FROM password_resets WHERE token = ? AND purpose = ?').get(token, purpose);
+}
+
+function assertChallenge(row, { code = '', inbound = false } = {}) {
+  if (!row) {
+    const error = new Error('Request a new code, then try again.');
+    error.status = 400;
+    throw error;
+  }
+  if (new Date(row.expires_at).getTime() <= Date.now()) {
+    db.prepare('DELETE FROM password_resets WHERE id = ?').run(row.id);
+    const error = new Error('That code expired. Request a new one.');
+    error.status = 400;
+    throw error;
+  }
+  if (row.attempts >= 5) {
+    db.prepare('DELETE FROM password_resets WHERE id = ?').run(row.id);
+    const error = new Error('Too many tries. Request a new code.');
+    error.status = 401;
+    throw error;
+  }
+  if (inbound) {
+    if (!row.inbound_verified) {
+      const error = new Error('Reply to the iMessage with your code, or enter it here.');
+      error.status = 401;
+      throw error;
+    }
+    return row;
+  }
+  if (String(code).replace(/\D/g, '').length !== 6) {
+    const error = new Error('Enter the 6-digit code we sent.');
+    error.status = 400;
+    throw error;
+  }
+  if (!passwordMatches(code.replace(/\D/g, ''), row.code_salt, row.code_hash)) {
+    db.prepare('UPDATE password_resets SET attempts = attempts + 1 WHERE id = ?').run(row.id);
+    const error = new Error('That code is incorrect.');
+    error.status = 401;
+    throw error;
+  }
+  return row;
+}
+
+function finishLogin(account) {
+  const user = publicUser(db.prepare(`SELECT ${USER_COLUMNS} FROM users WHERE id = ?`).get(account.id));
+  return { token: startSession(user.id), user };
+}
+
+setInboundHandler(({ phone, code }) => {
+  const account = findUserByPhone(phone);
+  if (!account) return 'unknown';
+  const row = db
+    .prepare(
+      `SELECT * FROM password_resets WHERE user_id = ? ORDER BY created_at DESC LIMIT 1`,
+    )
+    .get(account.id);
+  if (!row) return 'unknown';
+  try {
+    assertChallenge(row, { code });
+    db.prepare('UPDATE password_resets SET inbound_verified = 1 WHERE id = ?').run(row.id);
+    return 'verified';
+  } catch {
+    return 'unknown';
+  }
+});
 
 function startSession(userId) {
   const token = randomBytes(32).toString('hex');
@@ -262,23 +419,59 @@ app.post('/api/auth/signup', (request, response) => {
     )
     .run(cleanName, cleanEmail, cleanPhone, cleanCollege, salt, hash);
   const user = publicUser(db.prepare(`SELECT ${USER_COLUMNS} FROM users WHERE id = ?`).get(result.lastInsertRowid));
-  response.status(201).json({ token: startSession(user.id), user });
+  void sendSpectrumWelcome(cleanPhone, cleanName).catch((error) => {
+    console.error('Photon welcome iMessage failed:', error.message);
+  });
+  response.status(201).json({ token: startSession(user.id), user, spectrum: spectrumConfigured() });
 });
 
-app.post('/api/auth/login', (request, response) => {
+app.post('/api/auth/login', async (request, response) => {
   const { identifier, password } = request.body ?? {};
   const cleanIdentifier = typeof identifier === 'string' ? identifier.trim() : '';
   if (!cleanIdentifier || typeof password !== 'string' || !password) {
     return response.status(400).json({ error: 'Enter your email or phone and your password.' });
   }
-  const account = db
-    .prepare('SELECT * FROM users WHERE email = ? OR phone = ?')
-    .get(cleanIdentifier.toLowerCase(), cleanIdentifier);
+  const account = findAccountByIdentifier(cleanIdentifier);
   if (!account || !passwordMatches(password, account.password_salt, account.password_hash)) {
     return response.status(401).json({ error: 'Those credentials do not match an account.' });
   }
-  const user = publicUser(db.prepare(`SELECT ${USER_COLUMNS} FROM users WHERE id = ?`).get(account.id));
-  response.json({ token: startSession(user.id), user });
+  try {
+    const challenge = await issueChallenge(account, 'login_2fa');
+    response.json({
+      requiresSecondFactor: true,
+      ...challenge,
+    });
+  } catch (error) {
+    response.status(error.status ?? 500).json({ error: error.message });
+  }
+});
+
+app.post('/api/auth/verify-login', (request, response) => {
+  const challengeId = typeof request.body?.challengeId === 'string' ? request.body.challengeId : '';
+  const code = typeof request.body?.code === 'string' ? request.body.code : '';
+  const inbound = Boolean(request.body?.inbound);
+  const row = readChallenge(challengeId, 'login_2fa');
+  try {
+    assertChallenge(row, { code, inbound });
+    const account = db.prepare('SELECT * FROM users WHERE id = ?').get(row.user_id);
+    db.prepare('DELETE FROM password_resets WHERE id = ?').run(row.id);
+    response.json(finishLogin(account));
+  } catch (error) {
+    response.status(error.status ?? 500).json({ error: error.message });
+  }
+});
+
+app.get('/api/auth/challenge/:id', (request, response) => {
+  const row =
+    readChallenge(request.params.id, 'login_2fa') ?? readChallenge(request.params.id, 'password_reset');
+  if (!row) return response.status(404).json({ error: 'That code is no longer active.' });
+  response.json({
+    challengeId: row.token,
+    purpose: row.purpose,
+    inboundVerified: Boolean(row.inbound_verified),
+    phoneHint: maskPhone(row.phone),
+    channel: spectrumConfigured() ? 'imessage' : 'demo',
+  });
 });
 
 app.get('/api/auth/me', requireUser, (request, response) => {
@@ -347,7 +540,7 @@ app.post('/api/auth/logout', (request, response) => {
   response.status(204).end();
 });
 
-app.post('/api/auth/forgot-password', (request, response) => {
+app.post('/api/auth/forgot-password', async (request, response) => {
   const phone = typeof request.body?.phone === 'string' ? request.body.phone.trim() : '';
   if (!phone) return response.status(400).json({ error: 'Enter the phone number on your account.' });
 
@@ -356,70 +549,42 @@ app.post('/api/auth/forgot-password', (request, response) => {
     return response.status(404).json({ error: 'No account uses that phone number.' });
   }
 
-  const latest = db
-    .prepare('SELECT created_at FROM password_resets WHERE user_id = ? ORDER BY created_at DESC LIMIT 1')
-    .get(account.id);
-  if (latest && Date.now() - new Date(latest.created_at).getTime() < 45_000) {
-    return response.status(429).json({ error: 'Wait a moment before requesting another code.' });
+  try {
+    const challenge = await issueChallenge(account, 'password_reset');
+    response.json({ sent: true, ...challenge });
+  } catch (error) {
+    response.status(error.status ?? 500).json({ error: error.message });
   }
-
-  const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
-  const { salt, hash } = hashPassword(code);
-  const now = new Date();
-  db.prepare('DELETE FROM password_resets WHERE user_id = ?').run(account.id);
-  db.prepare(
-    `INSERT INTO password_resets (user_id, phone, code_salt, code_hash, expires_at, created_at)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-  ).run(account.id, account.phone, salt, hash, new Date(now.getTime() + 10 * 60 * 1000).toISOString(), now.toISOString());
-
-  console.log(`Password reset code for ${maskPhone(account.phone)}: ${code}`);
-  response.json({
-    sent: true,
-    phoneHint: maskPhone(account.phone),
-    expiresInMinutes: 10,
-    // No SMS provider is configured, so the UI shows this code in the reset form.
-    demoCode: code,
-  });
 });
 
 app.post('/api/auth/reset-password', (request, response) => {
   const phone = typeof request.body?.phone === 'string' ? request.body.phone.trim() : '';
-  const code = typeof request.body?.code === 'string' ? request.body.code.replace(/\D/g, '') : '';
+  const challengeId = typeof request.body?.challengeId === 'string' ? request.body.challengeId : '';
+  const code = typeof request.body?.code === 'string' ? request.body.code : '';
+  const inbound = Boolean(request.body?.inbound);
   const newPassword = request.body?.newPassword;
 
-  if (!phone) return response.status(400).json({ error: 'Enter the phone number on your account.' });
-  if (code.length !== 6) return response.status(400).json({ error: 'Enter the 6-digit code we sent.' });
   if (typeof newPassword !== 'string' || newPassword.length < 8) {
     return response.status(400).json({ error: 'New password must be at least 8 characters.' });
   }
 
-  const account = findUserByPhone(phone);
+  const row = challengeId
+    ? readChallenge(challengeId, 'password_reset')
+    : latestChallenge(findUserByPhone(phone)?.id, 'password_reset');
+  const account = row
+    ? db.prepare('SELECT * FROM users WHERE id = ?').get(row.user_id)
+    : findUserByPhone(phone);
   if (!account) return response.status(404).json({ error: 'No account uses that phone number.' });
-
-  const reset = db
-    .prepare('SELECT * FROM password_resets WHERE user_id = ? ORDER BY created_at DESC LIMIT 1')
-    .get(account.id);
-  if (!reset) return response.status(400).json({ error: 'Request a new code, then try again.' });
-  if (new Date(reset.expires_at).getTime() <= Date.now()) {
-    db.prepare('DELETE FROM password_resets WHERE id = ?').run(reset.id);
-    return response.status(400).json({ error: 'That code expired. Request a new one.' });
+  try {
+    assertChallenge(row, { code, inbound });
+    const { salt, hash } = hashPassword(newPassword);
+    db.prepare('UPDATE users SET password_salt = ?, password_hash = ? WHERE id = ?').run(salt, hash, account.id);
+    db.prepare('DELETE FROM password_resets WHERE user_id = ?').run(account.id);
+    db.prepare('DELETE FROM sessions WHERE user_id = ?').run(account.id);
+    response.json(finishLogin(account));
+  } catch (error) {
+    response.status(error.status ?? 500).json({ error: error.message });
   }
-  if (reset.attempts >= 5) {
-    db.prepare('DELETE FROM password_resets WHERE id = ?').run(reset.id);
-    return response.status(401).json({ error: 'Too many tries. Request a new code.' });
-  }
-  if (!passwordMatches(code, reset.code_salt, reset.code_hash)) {
-    db.prepare('UPDATE password_resets SET attempts = attempts + 1 WHERE id = ?').run(reset.id);
-    return response.status(401).json({ error: 'That code is incorrect.' });
-  }
-
-  const { salt, hash } = hashPassword(newPassword);
-  db.prepare('UPDATE users SET password_salt = ?, password_hash = ? WHERE id = ?').run(salt, hash, account.id);
-  db.prepare('DELETE FROM password_resets WHERE user_id = ?').run(account.id);
-  db.prepare('DELETE FROM sessions WHERE user_id = ?').run(account.id);
-
-  const user = publicUser(db.prepare(`SELECT ${USER_COLUMNS} FROM users WHERE id = ?`).get(account.id));
-  response.json({ token: startSession(user.id), user });
 });
 
 /**
@@ -574,6 +739,7 @@ app.use((request, response) => {
 
 const server = app.listen(port, '0.0.0.0', () => {
   console.log(`Campus Connect is running at http://localhost:${port}`);
+  void getSpectrumApp();
 });
 
 server.on('upgrade', (request, socket, head) => {
