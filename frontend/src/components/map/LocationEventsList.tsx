@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { CalendarDays, Check, MapPin, X } from "lucide-react";
 
@@ -11,6 +12,7 @@ interface LocationEventsListProps {
   filter: SidebarFilter;
   events: CampusEvent[];
   onSelect: (event: CampusEvent) => void;
+  onClose: () => void;
   goingIds?: Set<string>;
   onAccept?: (event: CampusEvent) => void;
   onReject?: (event: CampusEvent) => void;
@@ -47,32 +49,52 @@ export function LocationEventsList({
   filter,
   events,
   onSelect,
+  onClose,
   goingIds,
   onAccept,
   onReject,
 }: LocationEventsListProps) {
   const copy = COPY[filter];
-  if (!copy) return null;
   const showActions = filter === "userLed" && (onAccept || onReject);
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => event.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  if (!copy) return null;
 
   return (
     <AnimatePresence>
       <motion.div
         key={filter}
+        role="dialog"
+        aria-label={copy.title}
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 6 }}
         transition={{ duration: 0.18 }}
         className="absolute inset-x-3 top-[76px] z-20 max-h-[min(68vh,560px)] overflow-hidden rounded-[18px] border border-line bg-panel shadow-float tablet:inset-x-auto tablet:left-4 tablet:w-[min(420px,calc(100%-32px))]"
       >
-        <div className="flex items-center justify-between px-4 py-3">
-          <div>
+        <div className="flex items-center justify-between gap-3 px-4 py-3">
+          <div className="min-w-0">
             <p className="text-[15px] font-extrabold text-ink">{copy.title}</p>
             <p className="text-[12.5px] font-medium text-muted">{copy.source}</p>
           </div>
-          <span className="rounded-full bg-brand-tint px-2 py-0.5 text-[12px] font-bold text-brand">
-            {events.length}
-          </span>
+          <div className="flex shrink-0 items-center gap-2">
+            <span className="rounded-full bg-brand-tint px-2 py-0.5 text-[12px] font-bold text-brand">
+              {events.length}
+            </span>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label={`Close ${copy.title}`}
+              className="grid h-[30px] w-[30px] place-items-center rounded-full bg-field text-ink transition-colors hover:bg-[#e6eaf2]"
+            >
+              <X size={16} strokeWidth={2.6} />
+            </button>
+          </div>
         </div>
         <div aria-hidden className="mx-3 h-px bg-line" />
         <ul className="max-h-[min(56vh,460px)] overflow-y-auto p-1.5 scrollbar-none">
