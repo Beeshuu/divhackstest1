@@ -100,14 +100,11 @@ export function useCampusState(initialEventId?: string) {
         if (sidebarFilter === "tbd") return event.locationKind === "tbd";
         if (sidebarFilter === "remote") return event.locationKind === "remote";
         if (event.locationKind === "tbd" || event.locationKind === "remote") return false;
-        if (sidebarFilter !== "all" && sidebarFilter !== "saved" && event.category !== sidebarFilter)
-          return false;
-        if (mapPill === "freeFood" && event.category !== "Free Food") return false;
         if (categoryFilter !== "all" && event.category !== categoryFilter) return false;
         if (dateFilter === "today" && !event.dateLabel.startsWith("Today")) return false;
         return true;
       }),
-    [events, query, sidebarFilter, saved, mapPill, categoryFilter, dateFilter],
+    [events, query, sidebarFilter, saved, categoryFilter, dateFilter],
   );
 
   const showToast = useCallback((message: string) => {

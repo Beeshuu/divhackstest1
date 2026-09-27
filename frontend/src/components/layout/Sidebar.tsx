@@ -5,15 +5,7 @@ import { motion } from "framer-motion";
 import { MapPinOff, Monitor, Plus, X } from "lucide-react";
 
 import { GeminiSparkle } from "@/components/gemini/GeminiSparkle";
-import {
-  BasketballIcon,
-  BookmarkIcon,
-  BriefcaseIcon,
-  HouseIcon,
-  OpenBookIcon,
-  PeopleIcon,
-  PizzaSliceIcon,
-} from "@/components/icons/CategoryIcons";
+import { BookmarkIcon, HouseIcon } from "@/components/icons/CategoryIcons";
 import { cn } from "@/lib/utils";
 import type { SidebarFilter } from "@/types/event";
 
@@ -33,11 +25,6 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { label: "Happening Now", filter: "all", icon: HouseIcon, iconClass: "text-brand" },
-  { label: "Free Food", filter: "Free Food", icon: PizzaSliceIcon, iconClass: "" },
-  { label: "Social", filter: "Social", icon: PeopleIcon, iconClass: "text-[#A24BEE]" },
-  { label: "Academic", filter: "Academic", icon: OpenBookIcon, iconClass: "" },
-  { label: "Career", filter: "Career", icon: BriefcaseIcon, iconClass: "" },
-  { label: "Sports", filter: "Sports", icon: BasketballIcon, iconClass: "" },
   { label: "Saved", filter: "saved", icon: BookmarkIcon, iconClass: "text-[#3B4A66]" },
 ];
 
@@ -67,7 +54,7 @@ export function Sidebar({
 }: SidebarProps) {
   return (
     <aside
-      aria-label="Event categories"
+      aria-label="Campus navigation"
       className={cn(
         "fixed bottom-0 left-0 top-[72px] z-[60] flex w-[276px] shrink-0 flex-col overflow-y-auto border-r border-line-strong bg-rail px-4 pt-4 shadow-float transition-transform duration-200 ease-out scrollbar-none",
         "tablet:static tablet:z-auto tablet:w-[236px] tablet:translate-x-0 tablet:px-3.5 tablet:shadow-none desktop:w-[276px] desktop:px-4",

@@ -68,10 +68,10 @@ export interface CampusEvent {
 }
 
 /** Sidebar selection: a category, every event, or the user's saved events. */
-export type SidebarFilter = "all" | "saved" | "tbd" | "remote" | EventCategory;
+export type SidebarFilter = "all" | "saved" | "tbd" | "remote";
 
 /** Single-select view pills floating over the map. */
-export type MapPill = "trending" | "nearMe" | "freeFood";
+export type MapPill = "trending" | "nearMe";
 
 export type DateFilter = "today" | "any";
 

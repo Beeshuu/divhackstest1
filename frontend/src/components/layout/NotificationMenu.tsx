@@ -42,7 +42,7 @@ const STARTER_NOTICES: CampusNotice[] = [
   {
     id: "seed-food",
     title: "Free pizza usually drops at lunch",
-    body: "Open Free Food to see anything posted on the Columbia map right now.",
+    body: "Use the category filter for Free Food to see anything posted on the Columbia map right now.",
     time: "2m ago",
     action: "freeFood",
     icon: PizzaSliceIcon,

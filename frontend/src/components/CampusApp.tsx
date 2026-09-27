@@ -210,8 +210,8 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
         onOpenAccount={setAccountView}
         onNotificationAction={(action) => {
           if (action === "freeFood") {
-            state.setSidebarFilter("Free Food");
-            state.setMapPill("freeFood");
+            state.setSidebarFilter("all");
+            state.setMapPill("trending");
             state.setCategoryFilter("Free Food");
             state.setDateFilter("any");
             return;
@@ -299,7 +299,7 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
             events={state.events}
             goingCount={state.events.reduce((total, event) => total + event.goingCount, 0) + state.going.size}
             active={
-              state.mapPill === "freeFood" || state.sidebarFilter === "Free Food"
+              state.categoryFilter === "Free Food"
                 ? "freeFood"
                 : state.dateFilter === "any" && state.sidebarFilter === "all"
                   ? "active"
@@ -309,8 +309,8 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
             }
             onSelect={(id) => {
               if (id === "freeFood") {
-                state.setSidebarFilter("Free Food");
-                state.setMapPill("freeFood");
+                state.setSidebarFilter("all");
+                state.setMapPill("trending");
                 state.setCategoryFilter("Free Food");
                 state.setDateFilter("any");
                 return;
