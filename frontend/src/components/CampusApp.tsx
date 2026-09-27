@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence } from "framer-motion";
 
+import { AccountPanel, type AccountView } from "@/components/account/AccountPanel";
 import { CreateEventModal } from "@/components/events/CreateEventModal";
 import { EventDrawer } from "@/components/events/EventDrawer";
 import { AskGeminiFab } from "@/components/gemini/AskGeminiFab";
@@ -22,7 +23,9 @@ import { OutOfReachBanner } from "@/components/map/OutOfReachBanner";
 import { PickLocationBanner } from "@/components/map/PickLocationBanner";
 import { CATEGORY_STYLE } from "@/lib/constants";
 import { geoToMap, isOnMap } from "@/lib/geo";
+import { useAuth } from "@/lib/auth";
 import { eventPath, useCampusState } from "@/lib/use-campus-state";
+import { useEventHistory } from "@/lib/use-event-history";
 import { useGeolocation, type GeoStatus } from "@/lib/use-geolocation";
 import { useMediaQuery } from "@/lib/use-media-query";
 import type { CampusEvent, EventDraft, MapPill } from "@/types/event";
@@ -87,7 +90,10 @@ interface CampusAppProps {
 
 /** The full-screen Campus Connect shell, shared by `/` and `/events/[id]`. */
 export function CampusApp({ initialEventId }: CampusAppProps) {
+  const { user } = useAuth();
   const state = useCampusState(initialEventId);
+  const history = useEventHistory(user?.id, state.events, state.going);
+  const [accountView, setAccountView] = useState<AccountView | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const mapRef = useRef<MapViewHandle>(null);
   const geo = useGeolocation();
@@ -200,6 +206,7 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
           state.selectEvent(event.id);
           mapRef.current?.centerOn({ x: event.mapX, y: event.mapY });
         }}
+        onOpenAccount={setAccountView}
         onNotificationAction={(action) => {
           if (action === "freeFood") {
             state.setSidebarFilter("Free Food");
@@ -337,6 +344,19 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
             }}
           />
         </main>
+
+        <AccountPanel
+          open={accountView !== null}
+          view={accountView ?? "profile"}
+          onViewChange={setAccountView}
+          onClose={() => setAccountView(null)}
+          history={history}
+          onSelectEvent={(event) => {
+            const live = state.events.find((item) => item.id === event.id);
+            setAccountView(null);
+            if (live) openEvent(live);
+          }}
+        />
 
         <CreateEventModal
           open={composer === "form"}

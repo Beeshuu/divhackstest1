@@ -64,6 +64,11 @@ db.exec(`
   )
 `);
 
+const existingUserColumns = new Set(db.prepare('PRAGMA table_info(users)').all().map((column) => column.name));
+if (!existingUserColumns.has('profile_private')) {
+  db.exec('ALTER TABLE users ADD COLUMN profile_private INTEGER NOT NULL DEFAULT 0');
+}
+
 // The first release stored only coordinates and a title; the map needs more.
 const EVENT_COLUMN_ADDITIONS = {
   description: "TEXT NOT NULL DEFAULT ''",
@@ -136,7 +141,19 @@ db.exec(`DELETE FROM events WHERE title IN (${demoTitleList})`);
 app.use(express.json());
 app.use(express.static(join(root, 'dist')));
 
-const PUBLIC_USER_COLUMNS = 'id, name, email, phone, college';
+const USER_COLUMNS = 'id, name, email, phone, college, profile_private';
+
+function publicUser(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email ?? null,
+    phone: row.phone,
+    college: row.college,
+    profilePrivate: Boolean(row.profile_private),
+  };
+}
 
 function hashPassword(password, salt = randomBytes(16).toString('hex')) {
   return { salt, hash: scryptSync(password, salt, 64).toString('hex') };
@@ -164,11 +181,11 @@ function currentUser(request) {
   if (!token) return null;
   const row = db
     .prepare(
-      `SELECT users.id, users.name, users.email, users.phone, users.college
+      `SELECT users.id, users.name, users.email, users.phone, users.college, users.profile_private
        FROM sessions JOIN users ON users.id = sessions.user_id WHERE sessions.token = ?`,
     )
     .get(token);
-  return row ?? null;
+  return publicUser(row);
 }
 
 function requireUser(request, response, next) {
@@ -207,7 +224,7 @@ app.post('/api/auth/signup', (request, response) => {
       'INSERT INTO users (name, email, phone, college, password_salt, password_hash) VALUES (?, ?, ?, ?, ?, ?)',
     )
     .run(cleanName, cleanEmail, cleanPhone, cleanCollege, salt, hash);
-  const user = db.prepare(`SELECT ${PUBLIC_USER_COLUMNS} FROM users WHERE id = ?`).get(result.lastInsertRowid);
+  const user = publicUser(db.prepare(`SELECT ${USER_COLUMNS} FROM users WHERE id = ?`).get(result.lastInsertRowid));
   response.status(201).json({ token: startSession(user.id), user });
 });
 
@@ -223,12 +240,68 @@ app.post('/api/auth/login', (request, response) => {
   if (!account || !passwordMatches(password, account.password_salt, account.password_hash)) {
     return response.status(401).json({ error: 'Those credentials do not match an account.' });
   }
-  const user = db.prepare(`SELECT ${PUBLIC_USER_COLUMNS} FROM users WHERE id = ?`).get(account.id);
+  const user = publicUser(db.prepare(`SELECT ${USER_COLUMNS} FROM users WHERE id = ?`).get(account.id));
   response.json({ token: startSession(user.id), user });
 });
 
 app.get('/api/auth/me', requireUser, (request, response) => {
   response.json({ user: request.user });
+});
+
+app.patch('/api/auth/me', requireUser, (request, response) => {
+  const { name, email, phone, college, profilePrivate } = request.body ?? {};
+  const current = db.prepare(`SELECT ${USER_COLUMNS} FROM users WHERE id = ?`).get(request.user.id);
+  if (!current) return response.status(404).json({ error: 'That account no longer exists.' });
+
+  const nextName = typeof name === 'string' ? name.trim() : current.name;
+  const nextPhone = typeof phone === 'string' ? phone.trim() : current.phone;
+  const nextCollege = typeof college === 'string' ? college.trim() : current.college;
+  const nextEmail =
+    email === undefined
+      ? current.email
+      : typeof email === 'string' && email.trim()
+        ? email.trim().toLowerCase()
+        : null;
+  const nextPrivate =
+    typeof profilePrivate === 'boolean' ? (profilePrivate ? 1 : 0) : current.profile_private;
+
+  if (!nextName) return response.status(400).json({ error: 'Enter your full name.' });
+  if (!nextPhone) return response.status(400).json({ error: 'Enter your phone number.' });
+  if (!nextCollege) return response.status(400).json({ error: 'Choose your college or university.' });
+  if (nextEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nextEmail)) {
+    return response.status(400).json({ error: 'Enter a valid email address.' });
+  }
+  if (db.prepare('SELECT id FROM users WHERE phone = ? AND id != ?').get(nextPhone, current.id)) {
+    return response.status(409).json({ error: 'An account already uses that phone number.' });
+  }
+  if (nextEmail && db.prepare('SELECT id FROM users WHERE email = ? AND id != ?').get(nextEmail, current.id)) {
+    return response.status(409).json({ error: 'An account already uses that email address.' });
+  }
+
+  db.prepare(
+    'UPDATE users SET name = ?, email = ?, phone = ?, college = ?, profile_private = ? WHERE id = ?',
+  ).run(nextName, nextEmail, nextPhone, nextCollege, nextPrivate, current.id);
+
+  response.json({ user: publicUser(db.prepare(`SELECT ${USER_COLUMNS} FROM users WHERE id = ?`).get(current.id)) });
+});
+
+app.post('/api/auth/password', requireUser, (request, response) => {
+  const { currentPassword, newPassword } = request.body ?? {};
+  if (typeof currentPassword !== 'string' || !currentPassword) {
+    return response.status(400).json({ error: 'Enter your current password.' });
+  }
+  if (typeof newPassword !== 'string' || newPassword.length < 8) {
+    return response.status(400).json({ error: 'New password must be at least 8 characters.' });
+  }
+
+  const account = db.prepare('SELECT password_salt, password_hash FROM users WHERE id = ?').get(request.user.id);
+  if (!account || !passwordMatches(currentPassword, account.password_salt, account.password_hash)) {
+    return response.status(401).json({ error: 'Current password is incorrect.' });
+  }
+
+  const { salt, hash } = hashPassword(newPassword);
+  db.prepare('UPDATE users SET password_salt = ?, password_hash = ? WHERE id = ?').run(salt, hash, request.user.id);
+  response.status(204).end();
 });
 
 app.post('/api/auth/logout', (request, response) => {

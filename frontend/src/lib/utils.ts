@@ -46,3 +46,13 @@ export function todayLabel(now: Date = new Date()): string {
 export function isTimeRangeValid(start: string, end: string): boolean {
   return Boolean(start && end) && minutesOfDay(end) > minutesOfDay(start);
 }
+
+/** Initials stand in for a profile photo until uploads exist. */
+export function initialsOf(name: string): string {
+  const parts = name.trim().split(/\s+/).slice(0, 2);
+  return parts.map((part) => part[0]?.toUpperCase() ?? "").join("") || "?";
+}
+
+export function isEventEnded(event: { timeStatus: string }): boolean {
+  return event.timeStatus === "Ended";
+}
