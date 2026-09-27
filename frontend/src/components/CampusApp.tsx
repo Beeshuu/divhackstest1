@@ -31,6 +31,8 @@ import {
   isLocationOnCampus,
   sharesCampusMap,
 } from "@/lib/campuses";
+import { filesToEventImages, markPrimary, MAX_EVENT_IMAGES, userLedPrimaryImage } from "@/lib/event-images";
+import { communityEventFromApi, communityEventNumericId } from "@/lib/community-events";
 import { CATEGORY_STYLE } from "@/lib/constants";
 import { useAuth } from "@/lib/auth";
 import { useCampusNotices } from "@/lib/use-campus-notices";
@@ -57,6 +59,7 @@ function emptyDraft(now = new Date()): EventDraft {
     startTime: `${pad(start.getHours())}:${pad(start.getMinutes())}`,
     endTime,
     point: null,
+    images: [],
   };
 }
 
@@ -170,8 +173,19 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
         startsAt: start.toISOString(),
         closesAt: end.toISOString(),
       }),
-    }).then((response) => {
-      if (response.ok) void state.refreshLiveEvents();
+    }).then(async (response) => {
+      if (!response.ok) return;
+      const body = (await response.json()) as { id?: number };
+      if (body.id != null) {
+        for (const [index, image] of (created.images ?? []).entries()) {
+          await authFetch(`/api/events/${body.id}/images`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ image: image.url, primary: Boolean(image.isPrimary) || index === 0 }),
+          });
+        }
+      }
+      void state.refreshLiveEvents();
     });
   };
 
@@ -345,7 +359,15 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
             }
             draftPin={
               composer !== "closed" && draft.point
-                ? { ...draft.point, ...CATEGORY_STYLE[draft.category] }
+                ? {
+                    ...draft.point,
+                    ...CATEGORY_STYLE[draft.category],
+                    imageUrl: userLedPrimaryImage({
+                      source: "user",
+                      images: draft.images,
+                      primaryImageUrl: draft.images.find((image) => image.isPrimary)?.url ?? draft.images[0]?.url,
+                    }),
+                  }
                 : null
             }
           />
@@ -515,6 +537,75 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
                 state.restoreEvent(selected.id);
                 state.showToast("This event will show on your map again.");
               }}
+              onAddPhotos={
+                selected.source === "user" && selected.hostedByMe
+                  ? async (files) => {
+                      const current = selected.images ?? [];
+                      const added = (await filesToEventImages(files)).slice(0, MAX_EVENT_IMAGES - current.length);
+                      const apiId = communityEventNumericId(selected.id);
+                      if (apiId) {
+                        let latest = selected.images;
+                        for (const [index, image] of added.entries()) {
+                          const response = await authFetch(`/api/events/${apiId}/images`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              image: image.url,
+                              primary: current.length === 0 && index === 0,
+                            }),
+                          });
+                          if (!response.ok) continue;
+                          const row = await response.json();
+                          const mapped = communityEventFromApi(row, user?.id);
+                          if (mapped) latest = mapped.images;
+                        }
+                        if (latest) state.updateUserEventImages(selected.id, latest);
+                        void state.refreshLiveEvents();
+                        return;
+                      }
+                      const next = [...current, ...added];
+                      const primary = next.findIndex((image) => image.isPrimary);
+                      state.updateUserEventImages(selected.id, markPrimary(next, primary >= 0 ? primary : 0));
+                    }
+                  : undefined
+              }
+              onSetPrimaryPhoto={
+                selected.source === "user" && selected.hostedByMe
+                  ? (index) => {
+                      const next = markPrimary(selected.images ?? [], index);
+                      state.updateUserEventImages(selected.id, next);
+                      const apiId = communityEventNumericId(selected.id);
+                      const imageId = next[index]?.id;
+                      if (apiId && imageId != null) {
+                        void authFetch(`/api/events/${apiId}/images/${imageId}`, {
+                          method: "PATCH",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ primary: true }),
+                        }).then((response) => {
+                          if (response.ok) void state.refreshLiveEvents();
+                        });
+                      }
+                    }
+                  : undefined
+              }
+              onRemovePhoto={
+                selected.source === "user" && selected.hostedByMe
+                  ? (index) => {
+                      const removed = selected.images?.[index];
+                      const next = (selected.images ?? []).filter((_, item) => item !== index);
+                      const primary = next.findIndex((image) => image.isPrimary);
+                      state.updateUserEventImages(selected.id, markPrimary(next, primary >= 0 ? primary : 0));
+                      const apiId = communityEventNumericId(selected.id);
+                      if (apiId && removed?.id != null) {
+                        void authFetch(`/api/events/${apiId}/images/${removed.id}`, { method: "DELETE" }).then(
+                          (response) => {
+                            if (response.ok) void state.refreshLiveEvents();
+                          },
+                        );
+                      }
+                    }
+                  : undefined
+              }
             />
           )}
         </AnimatePresence>

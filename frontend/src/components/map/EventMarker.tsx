@@ -6,6 +6,7 @@ import { BookOpen, BriefcaseBusiness, GraduationCap, Music, Users } from "lucide
 
 import { PizzaSliceIcon, RunnerIcon } from "@/components/icons/CategoryIcons";
 import { MARKER_PALETTE } from "@/lib/constants";
+import { userLedPrimaryImage } from "@/lib/event-images";
 import { cn } from "@/lib/utils";
 import type { CampusEvent, MarkerIcon } from "@/types/event";
 
@@ -67,33 +68,56 @@ export function MapAnchor({
   );
 }
 
-/** The teardrop pin shape with its category glyph. */
+/** The teardrop pin shape with its category glyph, or a User Led primary photo. */
 export function MarkerPin({
   markerColor,
   iconType,
   selected = false,
-}: Pick<CampusEvent, "markerColor" | "iconType"> & { selected?: boolean }) {
+  imageUrl,
+}: Pick<CampusEvent, "markerColor" | "iconType"> & { selected?: boolean; imageUrl?: string }) {
   const palette = MARKER_PALETTE[markerColor];
   const Icon = MARKER_ICONS[iconType];
   const width = selected ? 39 : 34;
   const height = selected ? 50 : 44;
   return (
     <>
-      <svg viewBox="0 0 34 44" width={width} height={height} aria-hidden className="block">
+      {imageUrl && (
+        <span
+          aria-hidden
+          className="absolute left-0 top-0 h-[44px] w-[34px] overflow-hidden bg-field"
+          style={{
+            clipPath: 'path("M17 43.2c0 0 15.6-17.4 15.6-26.2a15.6 15.6 0 1 0-31.2 0C1.4 25.8 17 43.2 17 43.2Z")',
+            transform: `scale(${width / 34}, ${height / 44})`,
+            transformOrigin: "top left",
+          }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={imageUrl} alt="" className="h-full w-full object-cover" />
+        </span>
+      )}
+      <svg viewBox="0 0 34 44" width={width} height={height} aria-hidden className="relative block">
+        {!imageUrl && (
+          <path
+            d="M17 43.2c0 0 15.6-17.4 15.6-26.2a15.6 15.6 0 1 0-31.2 0C1.4 25.8 17 43.2 17 43.2Z"
+            fill={palette.solid}
+          />
+        )}
         <path
           d="M17 43.2c0 0 15.6-17.4 15.6-26.2a15.6 15.6 0 1 0-31.2 0C1.4 25.8 17 43.2 17 43.2Z"
-          fill={palette.solid}
+          fill="none"
           stroke="#FFFFFF"
           strokeWidth={2.2}
         />
       </svg>
-      <span
-        aria-hidden
-        className="absolute left-0 right-0 top-0 grid place-items-center text-white"
-        style={{ height: width }}
-      >
-        <Icon size={selected ? 19 : 17} strokeWidth={2.3} />
-      </span>
+      {!imageUrl && (
+        <span
+          aria-hidden
+          className="absolute left-0 right-0 top-0 grid place-items-center text-white"
+          style={{ height: width }}
+        >
+          <Icon size={selected ? 19 : 17} strokeWidth={2.3} />
+        </span>
+      )}
     </>
   );
 }
@@ -148,7 +172,12 @@ export function EventMarker({
         )}
         style={{ width, height }}
       >
-        <MarkerPin markerColor={event.markerColor} iconType={event.iconType} selected={selected} />
+        <MarkerPin
+          markerColor={event.markerColor}
+          iconType={event.iconType}
+          selected={selected}
+          imageUrl={userLedPrimaryImage(event)}
+        />
       </motion.button>
     </div>
     </MapAnchor>

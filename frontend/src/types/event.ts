@@ -75,6 +75,16 @@ export interface CampusEvent {
   campusId?: string;
   latitude?: number;
   longitude?: number;
+  /** Host-uploaded photos. Only student-posted (User Led) events use these. */
+  images?: EventImage[];
+  /** First/primary photo, used as the User Led map pin. */
+  primaryImageUrl?: string;
+}
+
+export interface EventImage {
+  id?: number | string;
+  url: string;
+  isPrimary?: boolean;
 }
 
 /** Sidebar selection: a category, every event, or the user's saved events. */
@@ -95,4 +105,6 @@ export interface EventDraft {
   endTime: string;
   /** Pin position on the campus map in %, set via "Choose on map". */
   point: { x: number; y: number } | null;
+  /** Host photos for this User Led post. The first one is the map marker. */
+  images: EventImage[];
 }

@@ -21,6 +21,8 @@ import {
 import { AvatarStack } from "./AvatarStack";
 import { CategoryHeroArt } from "./CategoryHeroArt";
 import { EventHeroArt } from "./EventHeroArt";
+import { EventPhotoPicker } from "./EventPhotoPicker";
+import { userLedPrimaryImage } from "@/lib/event-images";
 import { CategoryGlyph, PeopleIcon } from "@/components/icons/CategoryIcons";
 import { MARKER_PALETTE } from "@/lib/constants";
 import { useMediaQuery } from "@/lib/use-media-query";
@@ -41,6 +43,9 @@ interface EventDrawerProps {
   isRejected?: boolean;
   onReject: () => void;
   onRestore?: () => void;
+  onAddPhotos?: (files: FileList) => void;
+  onSetPrimaryPhoto?: (index: number) => void;
+  onRemovePhoto?: (index: number) => void;
 }
 
 /**
@@ -122,9 +127,13 @@ function DrawerCard({
   isRejected,
   onReject,
   onRestore,
+  onAddPhotos,
+  onSetPrimaryPhoto,
+  onRemovePhoto,
 }: EventDrawerProps) {
   const palette = MARKER_PALETTE[event.markerColor];
   const goingCount = event.goingCount + (isGoing ? 1 : 0);
+  const userPhoto = userLedPrimaryImage(event);
 
   return (
     <div className="flex h-full max-h-full flex-col overflow-hidden rounded-[20px] bg-panel shadow-panel">
@@ -139,7 +148,10 @@ function DrawerCard({
               transition={{ duration: 0.2 }}
               className="absolute inset-0"
             >
-              {event.iconType === "pizza" && !event.isTemporary ? (
+              {userPhoto ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={userPhoto} alt="" className="h-full w-full object-cover" />
+              ) : event.iconType === "pizza" && !event.isTemporary ? (
                 <EventHeroArt />
               ) : (
                 <CategoryHeroArt event={event} />
@@ -243,6 +255,18 @@ function DrawerCard({
         <p className="mt-[18px] text-[15px] leading-[21px] text-ink-soft">
           <Emphasized text={event.description} emphasis={event.emphasis} />
         </p>
+
+        {event.source === "user" && (event.hostedByMe || (event.images?.length ?? 0) > 0) && (
+          <div className="mt-[16px]">
+            <EventPhotoPicker
+              images={event.images ?? []}
+              canEdit={Boolean(event.hostedByMe && onAddPhotos)}
+              onAdd={(files) => onAddPhotos?.(files)}
+              onSetPrimary={onSetPrimaryPhoto}
+              onRemove={onRemovePhoto}
+            />
+          </div>
+        )}
 
         <div className="mt-[16px] flex items-start">
           <div className="min-w-0 flex-1 pr-3">

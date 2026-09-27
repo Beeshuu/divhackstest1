@@ -136,10 +136,15 @@ export function useCampusState(
       if (!response.ok) return;
       const body: unknown = await response.json();
       const rows = Array.isArray(body) ? body : [];
-      setCommunityEvents(
-        rows
-          .map((row) => communityEventFromApi(row as Parameters<typeof communityEventFromApi>[0], userId))
-          .filter((event): event is CampusEvent => Boolean(event)),
+      const mapped = rows
+        .map((row) => communityEventFromApi(row as Parameters<typeof communityEventFromApi>[0], userId))
+        .filter((event): event is CampusEvent => Boolean(event));
+      setCommunityEvents(mapped);
+      setCreatedEvents((prev) =>
+        prev.filter(
+          (created) =>
+            !mapped.some((live) => live.hostedByMe && live.title === created.title && live.source === "user"),
+        ),
       );
     } catch {
       // Seeded student events still fill User Led Events if the API is down.
@@ -289,6 +294,8 @@ export function useCampusState(
         campusId: eventCampusIdValue,
         latitude: campusMapToGeo(draft.point, eventCampusIdValue).lat,
         longitude: campusMapToGeo(draft.point, eventCampusIdValue).lng,
+        images: draft.images ?? [],
+        primaryImageUrl: draft.images?.find((image) => image.isPrimary)?.url ?? draft.images?.[0]?.url,
       };
       setCreatedEvents((prev) => [...prev, event]);
       setSelectedId(event.id);
@@ -298,6 +305,15 @@ export function useCampusState(
     },
     [campusId],
   );
+
+  const updateUserEventImages = useCallback((eventId: string, images: CampusEvent["images"]) => {
+    const list = images ?? [];
+    const primaryImageUrl = list.find((image) => image.isPrimary)?.url ?? list[0]?.url;
+    const patch = (event: CampusEvent) =>
+      event.id === eventId ? { ...event, images: list, primaryImageUrl } : event;
+    setCreatedEvents((prev) => prev.map(patch));
+    setCommunityEvents((prev) => prev.map(patch));
+  }, []);
 
   const clearFilters = useCallback(() => {
     setQuery("");
@@ -334,6 +350,7 @@ export function useCampusState(
     categoryFilter,
     setCategoryFilter,
     createEvent,
+    updateUserEventImages,
     toast,
     showToast,
     dismissToast: () => setToast(null),

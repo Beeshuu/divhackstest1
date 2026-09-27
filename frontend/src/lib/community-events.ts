@@ -17,6 +17,12 @@ interface ApiEventRow {
   closes_at: string;
   joined_count?: number;
   created_by?: number;
+  images?: Array<{ id?: number; url: string; isPrimary?: boolean }>;
+}
+
+export function communityEventNumericId(eventId: string): string | null {
+  const match = /^user-(\d+)$/.exec(eventId);
+  return match?.[1] ?? null;
 }
 
 export function communityEventFromApi(row: ApiEventRow, myUserId?: number): CampusEvent | null {
@@ -29,6 +35,9 @@ export function communityEventFromApi(row: ApiEventRow, myUserId?: number): Camp
   const point = geoToCampusMap(latlng, campusId);
   const category = row.category as EventCategory;
   const style = CATEGORY_STYLE[category];
+  const images = Array.isArray(row.images)
+    ? row.images.filter((image) => typeof image?.url === "string" && image.url.length > 0)
+    : [];
   return {
     id: `user-${row.id}`,
     title: row.title,
@@ -56,5 +65,7 @@ export function communityEventFromApi(row: ApiEventRow, myUserId?: number): Camp
     locationKind: "mapped",
     source: "user",
     hostedByMe: myUserId != null && row.created_by === myUserId,
+    images,
+    primaryImageUrl: images.find((image) => image.isPrimary)?.url ?? images[0]?.url,
   };
 }

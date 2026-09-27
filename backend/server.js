@@ -2,8 +2,8 @@ import express from 'express';
 import http from 'node:http';
 import net from 'node:net';
 import { randomBytes, randomInt, scryptSync, timingSafeEqual } from 'node:crypto';
-import { mkdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { mkdirSync, writeFileSync, unlinkSync, readFileSync, existsSync } from 'node:fs';
+import { join, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { loadOfficialEvents } from './official-events.js';
@@ -132,6 +132,21 @@ for (const [column, definition] of Object.entries(EVENT_COLUMN_ADDITIONS)) {
   if (!existingEventColumns.has(column)) db.exec(`ALTER TABLE events ADD COLUMN ${column} ${definition}`);
 }
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS event_images (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_id INTEGER NOT NULL REFERENCES events(id),
+    filename TEXT NOT NULL,
+    mime TEXT NOT NULL,
+    is_primary INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+const eventImageDirectory = join(dataDirectory, 'event-images');
+mkdirSync(eventImageDirectory, { recursive: true });
+const MAX_EVENT_IMAGES = 4;
+const MAX_EVENT_IMAGE_BYTES = 1_500_000;
+
 const app = express();
 const port = Number(process.env.PORT) || 3000;
 const frontendPort = Number(process.env.FRONTEND_PORT) || 3001;
@@ -221,7 +236,7 @@ app.post('/api/spectrum/webhook', express.raw({ type: '*/*' }), async (request, 
   response.status(result.status).set(result.headers).send(Buffer.from(result.body));
 });
 
-app.use(express.json());
+app.use(express.json({ limit: '3mb' }));
 app.use(express.static(join(root, 'dist')));
 
 const USER_COLUMNS =
@@ -713,18 +728,56 @@ app.post('/api/auth/reset-password', (request, response) => {
 const EVENT_FIELDS = `
   events.id, events.title, events.category, events.description, events.location_name,
   events.address, events.host, events.latitude, events.longitude, events.players_needed,
-  events.starts_at, events.closes_at, events.created_at,
+  events.starts_at, events.closes_at, events.created_at, events.created_by,
   events.joined_count + (
     SELECT COUNT(*) FROM event_attendees WHERE event_attendees.event_id = events.id
   ) AS joined_count
 `;
+
+function eventImagePublicUrl(filename) {
+  return `/api/event-images/${filename}`;
+}
+
+function listEventImages(eventId) {
+  return db
+    .prepare(
+      'SELECT id, filename, mime, is_primary FROM event_images WHERE event_id = ? ORDER BY is_primary DESC, id',
+    )
+    .all(eventId)
+    .map((row) => ({
+      id: row.id,
+      url: eventImagePublicUrl(row.filename),
+      isPrimary: Boolean(row.is_primary),
+    }));
+}
 
 function attachGoing(row, userId) {
   if (!row) return null;
   const going = userId
     ? db.prepare('SELECT 1 FROM event_attendees WHERE event_id = ? AND user_id = ?').get(row.id, userId)
     : null;
-  return { ...row, going: Boolean(going) };
+  return { ...row, going: Boolean(going), images: listEventImages(row.id) };
+}
+
+function requireEventHost(request, response, eventId) {
+  const event = db.prepare('SELECT id, created_by FROM events WHERE id = ?').get(eventId);
+  if (!event) {
+    response.status(404).json({ error: 'That event does not exist.' });
+    return null;
+  }
+  if (event.created_by !== request.user.id) {
+    response.status(403).json({ error: 'Only the host can add photos to this posting.' });
+    return null;
+  }
+  return event;
+}
+
+function decodeEventImage(dataUrl) {
+  const match = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=\s]+)$/.exec(String(dataUrl ?? ''));
+  if (!match) return null;
+  const buffer = Buffer.from(match[2].replace(/\s+/g, ''), 'base64');
+  if (!buffer.length || buffer.length > MAX_EVENT_IMAGE_BYTES) return null;
+  return { mime: match[1], buffer };
 }
 
 function findEvent(id, userId) {
@@ -812,6 +865,77 @@ app.post('/api/events', requireUser, (request, response) => {
       request.user.id,
     );
   response.status(201).json(findEvent(result.lastInsertRowid, request.user.id));
+});
+
+app.get('/api/event-images/:filename', (request, response) => {
+  const filename = basename(String(request.params.filename ?? ''));
+  if (!/^[a-zA-Z0-9._-]+$/.test(filename)) {
+    return response.status(404).json({ error: 'That photo does not exist.' });
+  }
+  const path = join(eventImageDirectory, filename);
+  if (!existsSync(path)) return response.status(404).json({ error: 'That photo does not exist.' });
+  const row = db.prepare('SELECT mime FROM event_images WHERE filename = ?').get(filename);
+  response.setHeader('Content-Type', row?.mime || 'image/jpeg');
+  response.setHeader('Cache-Control', 'public, max-age=86400');
+  response.send(readFileSync(path));
+});
+
+app.post('/api/events/:id/images', requireUser, (request, response) => {
+  const event = requireEventHost(request, response, request.params.id);
+  if (!event) return;
+  const count = db.prepare('SELECT COUNT(*) AS total FROM event_images WHERE event_id = ?').get(event.id).total;
+  if (count >= MAX_EVENT_IMAGES) {
+    return response.status(400).json({ error: `You can add up to ${MAX_EVENT_IMAGES} photos.` });
+  }
+  const decoded = decodeEventImage(request.body?.image);
+  if (!decoded) return response.status(400).json({ error: 'Choose a JPEG, PNG, or WebP photo.' });
+  const filename = `${event.id}-${randomBytes(8).toString('hex')}.jpg`;
+  writeFileSync(join(eventImageDirectory, filename), decoded.buffer);
+  const makePrimary = request.body?.primary === true || count === 0;
+  if (makePrimary) {
+    db.prepare('UPDATE event_images SET is_primary = 0 WHERE event_id = ?').run(event.id);
+  }
+  db.prepare('INSERT INTO event_images (event_id, filename, mime, is_primary) VALUES (?, ?, ?, ?)').run(
+    event.id,
+    filename,
+    decoded.mime,
+    makePrimary ? 1 : 0,
+  );
+  response.status(201).json(findEvent(event.id, request.user.id));
+});
+
+app.patch('/api/events/:id/images/:imageId', requireUser, (request, response) => {
+  const event = requireEventHost(request, response, request.params.id);
+  if (!event) return;
+  const image = db
+    .prepare('SELECT id FROM event_images WHERE id = ? AND event_id = ?')
+    .get(request.params.imageId, event.id);
+  if (!image) return response.status(404).json({ error: 'That photo does not exist.' });
+  if (request.body?.primary === true) {
+    db.prepare('UPDATE event_images SET is_primary = 0 WHERE event_id = ?').run(event.id);
+    db.prepare('UPDATE event_images SET is_primary = 1 WHERE id = ?').run(image.id);
+  }
+  response.json(findEvent(event.id, request.user.id));
+});
+
+app.delete('/api/events/:id/images/:imageId', requireUser, (request, response) => {
+  const event = requireEventHost(request, response, request.params.id);
+  if (!event) return;
+  const image = db
+    .prepare('SELECT id, filename, is_primary FROM event_images WHERE id = ? AND event_id = ?')
+    .get(request.params.imageId, event.id);
+  if (!image) return response.status(404).json({ error: 'That photo does not exist.' });
+  db.prepare('DELETE FROM event_images WHERE id = ?').run(image.id);
+  try {
+    unlinkSync(join(eventImageDirectory, image.filename));
+  } catch {
+    // The listing is gone even if the file was already removed.
+  }
+  if (image.is_primary) {
+    const next = db.prepare('SELECT id FROM event_images WHERE event_id = ? ORDER BY id LIMIT 1').get(event.id);
+    if (next) db.prepare('UPDATE event_images SET is_primary = 1 WHERE id = ?').run(next.id);
+  }
+  response.json(findEvent(event.id, request.user.id));
 });
 
 app.post('/api/events/:id/join', requireUser, (request, response) => {
