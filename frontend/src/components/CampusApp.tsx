@@ -23,10 +23,12 @@ import { MapToast } from "@/components/map/MapToast";
 import { OutOfReachBanner } from "@/components/map/OutOfReachBanner";
 import { PickLocationBanner } from "@/components/map/PickLocationBanner";
 import { CATEGORY_STYLE } from "@/lib/constants";
-import { geoToMap, isOnMap } from "@/lib/geo";
+import { geoToMap, isOnMap, mapToGeo } from "@/lib/geo";
 import { useAuth } from "@/lib/auth";
+import { useCampusNotices } from "@/lib/use-campus-notices";
 import { eventPath, useCampusState } from "@/lib/use-campus-state";
 import { useEventHistory } from "@/lib/use-event-history";
+import { dateTodayAt } from "@/lib/utils";
 import { useGeolocation, type GeoStatus } from "@/lib/use-geolocation";
 import { useMediaQuery } from "@/lib/use-media-query";
 import type { CampusEvent, EventDraft, MapPill } from "@/types/event";
@@ -91,8 +93,9 @@ interface CampusAppProps {
 
 /** The full-screen Campus Connect shell, shared by `/` and `/events/[id]`. */
 export function CampusApp({ initialEventId }: CampusAppProps) {
-  const { user } = useAuth();
-  const state = useCampusState(initialEventId);
+  const { user, authFetch } = useAuth();
+  const state = useCampusState(initialEventId, user?.id, user?.name);
+  const notices = useCampusNotices(user?.id, state.events, state.going);
   const history = useEventHistory(user?.id, state.events, state.going);
   const [accountView, setAccountView] = useState<AccountView | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -121,12 +124,35 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
   };
 
   const submitDraft = () => {
-    const created = state.createEvent(draft);
+    const created = state.createEvent(draft, user?.name ?? "You");
     if (!created) return;
     setComposer("closed");
     setDraft(emptyDraft());
     mapRef.current?.centerOn({ x: created.mapX, y: created.mapY });
-    state.showToast("Your event is on the map for this session. It will disappear when you refresh.");
+    state.showToast("Your event is on the map. Other students will see it under User Led Events.");
+
+    if (!draft.point) return;
+    const start = dateTodayAt(draft.startTime);
+    const end = dateTodayAt(draft.endTime);
+    if (end <= start) end.setDate(end.getDate() + 1);
+    const geo = mapToGeo(draft.point);
+    void authFetch("/api/events", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: created.title,
+        category: created.category,
+        description: created.description,
+        locationName: created.locationName,
+        address: created.address,
+        latitude: geo.lat,
+        longitude: geo.lng,
+        startsAt: start.toISOString(),
+        closesAt: end.toISOString(),
+      }),
+    }).then((response) => {
+      if (response.ok) void state.refreshLiveEvents();
+    });
   };
 
   useEffect(() => {
@@ -199,6 +225,9 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
         onOpenSidebar={() => setSidebarOpen(true)}
         onAskGemini={openGemini}
         events={state.events}
+        notices={notices.notices}
+        unreadNotices={notices.unread}
+        onNoticesSeen={notices.markSeen}
         query={state.query}
         onQueryChange={state.setQuery}
         results={state.visibleEvents}
@@ -228,7 +257,9 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
           onClose={() => setSidebarOpen(false)}
           selected={state.sidebarFilter}
           onSelect={(filter) => {
-            const closingLocation = (filter === "tbd" || filter === "remote") && state.sidebarFilter === filter;
+            const closingLocation =
+              (filter === "tbd" || filter === "remote" || filter === "userLed") &&
+              state.sidebarFilter === filter;
             const next = closingLocation ? "all" : filter;
             state.setSidebarFilter(next);
             if (next === "all") {
@@ -241,6 +272,7 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
           savedCount={state.saved.size}
           tbdCount={state.tbdCount}
           remoteCount={state.remoteCount}
+          userLedCount={state.userLedCount}
           onPostEvent={openComposer}
           onAskGemini={openGemini}
         />
@@ -335,7 +367,9 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
               state.setDateFilter("today");
             }}
           />
-          {(state.sidebarFilter === "tbd" || state.sidebarFilter === "remote") && (
+          {(state.sidebarFilter === "tbd" ||
+            state.sidebarFilter === "remote" ||
+            state.sidebarFilter === "userLed") && (
             <LocationEventsList
               filter={state.sidebarFilter}
               events={state.visibleEvents}
@@ -346,6 +380,7 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
             visible={
               state.sidebarFilter !== "tbd" &&
               state.sidebarFilter !== "remote" &&
+              state.sidebarFilter !== "userLed" &&
               state.events.length > 0 &&
               state.visibleEvents.length === 0
             }
@@ -398,7 +433,14 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
               event={selected}
               onClose={state.closeDrawer}
               isGoing={state.going.has(selected.id)}
-              onToggleGoing={() => state.toggleGoing(selected.id)}
+              onToggleGoing={() => {
+                const joining = !state.going.has(selected.id);
+                state.toggleGoing(selected.id);
+                if (joining) {
+                  notices.notifyJoin(selected);
+                  state.showToast(`You're going to ${selected.title}. We'll remind you 30 minutes before it starts.`);
+                }
+              }}
               isSaved={state.saved.has(selected.id)}
               onToggleSaved={() => state.toggleSaved(selected.id)}
               onShare={() => shareEvent(selected, state.showToast)}

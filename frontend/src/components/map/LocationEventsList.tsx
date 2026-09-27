@@ -12,14 +12,21 @@ interface LocationEventsListProps {
   onSelect: (event: CampusEvent) => void;
 }
 
-const COPY: Partial<Record<SidebarFilter, { title: string; empty: string }>> = {
+const COPY: Partial<Record<SidebarFilter, { title: string; empty: string; source: string }>> = {
   tbd: {
     title: "TBD locations",
     empty: "University Life has no events without a listed location right now.",
+    source: "From University Life · updates with their calendar",
   },
   remote: {
     title: "Remote events",
     empty: "University Life has no remote or online events right now.",
+    source: "From University Life · updates with their calendar",
+  },
+  userLed: {
+    title: "User Led Events",
+    empty: "No student-posted events right now. Use Post Event to add one.",
+    source: "Posted by students on Campus Connect",
   },
 };
 
@@ -41,7 +48,7 @@ export function LocationEventsList({ filter, events, onSelect }: LocationEventsL
         <div className="flex items-center justify-between px-4 py-3">
           <div>
             <p className="text-[15px] font-extrabold text-ink">{copy.title}</p>
-            <p className="text-[12.5px] font-medium text-muted">From University Life · updates with their calendar</p>
+            <p className="text-[12.5px] font-medium text-muted">{copy.source}</p>
           </div>
           <span className="rounded-full bg-brand-tint px-2 py-0.5 text-[12px] font-bold text-brand">
             {events.length}
@@ -66,7 +73,10 @@ export function LocationEventsList({ filter, events, onSelect }: LocationEventsL
                     <span className="block truncate text-[14.5px] font-bold text-ink">{event.title}</span>
                     <span className="mt-[3px] flex items-center gap-1.5 text-[12.5px] font-medium text-muted">
                       <MapPin size={12} strokeWidth={2.3} aria-hidden />
-                      <span className="truncate">{event.locationName}</span>
+                      <span className="truncate">
+                        {event.locationName}
+                        {filter === "userLed" ? ` · ${event.host}` : ""}
+                      </span>
                     </span>
                     <span className="mt-[2px] flex items-center gap-1.5 text-[12.5px] font-medium text-faint">
                       <CalendarDays size={12} strokeWidth={2.3} aria-hidden />

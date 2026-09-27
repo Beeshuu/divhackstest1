@@ -69,7 +69,7 @@ export function useEventHistory(
 
     const liveGoing = events.filter((event) => going.has(event.id) && !isEventEnded(event));
     const liveAttended = events.filter((event) => going.has(event.id) && isEventEnded(event));
-    const liveHosted = events.filter((event) => event.host === "You");
+    const liveHosted = events.filter((event) => event.hostedByMe || event.host === "You");
     const dropped = new Set(events.filter((event) => !going.has(event.id)).map((event) => event.id));
 
     setHistory((prev) => {

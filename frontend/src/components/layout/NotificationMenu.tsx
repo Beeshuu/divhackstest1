@@ -1,85 +1,54 @@
 "use client";
 
-import { useMemo, useState, type ComponentType } from "react";
+import { useState, type ComponentType } from "react";
 import { motion } from "framer-motion";
-import { Bell, Radio } from "lucide-react";
+import { Bell, CalendarClock, Check, Radio } from "lucide-react";
 
 import { PizzaSliceIcon } from "@/components/icons/CategoryIcons";
+import type { CampusNotice, NoticeIcon, NotificationAction } from "@/lib/use-campus-notices";
 import type { CampusEvent } from "@/types/event";
 
-export type NotificationAction = "freeFood" | "happening";
-
-interface CampusNotice {
-  id: string;
-  title: string;
-  body: string;
-  time: string;
-  eventId?: string;
-  action?: NotificationAction;
-  icon: ComponentType<{ size?: number; className?: string }>;
-  iconClass: string;
-}
+export type { NotificationAction };
 
 interface NotificationMenuProps {
+  notices: CampusNotice[];
+  unread: number;
+  onSeen: () => void;
   events: CampusEvent[];
   onSelectEvent: (event: CampusEvent) => void;
   onAction: (action: NotificationAction) => void;
 }
 
-function noticesFromEvents(events: CampusEvent[]): CampusNotice[] {
-  return events.slice(0, 4).map((event) => ({
-    id: `event-${event.id}`,
-    title: event.category === "Free Food" ? "Free food on the map" : "New campus event",
-    body: `${event.title} at ${event.locationName} · ${event.timeStatus}`,
-    time: "Just now",
-    eventId: event.id,
-    icon: event.category === "Free Food" ? PizzaSliceIcon : Radio,
-    iconClass: event.category === "Free Food" ? "" : "text-[#F5453A]",
-  }));
-}
+const ICONS: Record<NoticeIcon, ComponentType<{ size?: number; className?: string }>> = {
+  bell: Bell,
+  calendar: CalendarClock,
+  check: Check,
+  food: PizzaSliceIcon,
+  radio: Radio,
+};
 
-const STARTER_NOTICES: CampusNotice[] = [
-  {
-    id: "seed-food",
-    title: "Free pizza usually drops at lunch",
-    body: "Use the category filter for Free Food to see anything posted on the Columbia map right now.",
-    time: "2m ago",
-    action: "freeFood",
-    icon: PizzaSliceIcon,
-    iconClass: "",
-  },
-  {
-    id: "seed-now",
-    title: "What's happening on campus",
-    body: "Happening Now shows today's listings. Post an event if you're hosting.",
-    time: "1h ago",
-    action: "happening",
-    icon: Radio,
-    iconClass: "text-[#F5453A]",
-  },
-  {
-    id: "seed-welcome",
-    title: "Welcome to Campus Connect",
-    body: "Save events, tap I'm Going, or ask Gemini what's nearby.",
-    time: "Today",
-    icon: Bell,
-    iconClass: "text-brand",
-  },
-];
+const ICON_CLASS: Record<NoticeIcon, string> = {
+  bell: "text-brand",
+  calendar: "text-brand",
+  check: "text-[#16A34A]",
+  food: "",
+  radio: "text-[#F5453A]",
+};
 
 /** Bell menu: campus alerts. The unread dot clears the first time it opens. */
-export function NotificationMenu({ events, onSelectEvent, onAction }: NotificationMenuProps) {
+export function NotificationMenu({
+  notices,
+  unread,
+  onSeen,
+  events,
+  onSelectEvent,
+  onAction,
+}: NotificationMenuProps) {
   const [open, setOpen] = useState(false);
-  const [seen, setSeen] = useState(false);
-  const notices = useMemo(() => {
-    const live = noticesFromEvents(events);
-    return live.length > 0 ? [...live, STARTER_NOTICES[2]] : STARTER_NOTICES;
-  }, [events]);
-  const unread = seen ? 0 : notices.length;
 
   const openMenu = () => {
     setOpen(true);
-    setSeen(true);
+    onSeen();
   };
 
   const choose = (notice: CampusNotice) => {
@@ -134,7 +103,7 @@ export function NotificationMenu({ events, onSelectEvent, onAction }: Notificati
             <div aria-hidden className="mx-2 h-px bg-line" />
             <ul className="max-h-[360px] overflow-y-auto py-1 scrollbar-none">
               {notices.map((notice) => {
-                const Icon = notice.icon;
+                const Icon = ICONS[notice.icon];
                 return (
                   <li key={notice.id}>
                     <button
@@ -144,7 +113,7 @@ export function NotificationMenu({ events, onSelectEvent, onAction }: Notificati
                       className="flex w-full items-start gap-3 rounded-[11px] px-3 py-2.5 text-left transition-colors duration-100 hover:bg-brand-tint"
                     >
                       <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full bg-field">
-                        <Icon size={17} aria-hidden className={notice.iconClass} />
+                        <Icon size={17} aria-hidden className={ICON_CLASS[notice.icon]} />
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block text-[14px] font-bold leading-[1.25] text-ink">

@@ -51,6 +51,8 @@ export interface CampusEvent {
   dateLabel: string;
   /** ISO start used to decide whether the event is today. */
   startsAt?: string;
+  /** ISO end used for reminders and “ended” checks. */
+  endsAt?: string;
   goingCount: number;
   interestedCount: number;
   host: string;
@@ -66,11 +68,13 @@ export interface CampusEvent {
   /** Live University Life listings: mapped campus pin, TBD, or remote. */
   locationKind?: "mapped" | "tbd" | "remote";
   sourceUrl?: string;
-  source?: "university-life";
+  source?: "university-life" | "user";
+  /** True when the signed-in student posted this listing. */
+  hostedByMe?: boolean;
 }
 
 /** Sidebar selection: a category, every event, or the user's saved events. */
-export type SidebarFilter = "all" | "saved" | "tbd" | "remote";
+export type SidebarFilter = "all" | "saved" | "tbd" | "remote" | "userLed";
 
 /** Single-select view pills floating over the map. */
 export type MapPill = "trending" | "nearMe";

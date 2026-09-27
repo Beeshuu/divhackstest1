@@ -2,7 +2,7 @@
 
 import type { ComponentType } from "react";
 import { motion } from "framer-motion";
-import { MapPinOff, Monitor, Plus, X } from "lucide-react";
+import { MapPinOff, Monitor, Plus, Users, X } from "lucide-react";
 
 import { GeminiSparkle } from "@/components/gemini/GeminiSparkle";
 import { BookmarkIcon, HouseIcon } from "@/components/icons/CategoryIcons";
@@ -36,6 +36,7 @@ interface SidebarProps {
   savedCount: number;
   tbdCount: number;
   remoteCount: number;
+  userLedCount: number;
   onPostEvent: () => void;
   onAskGemini: () => void;
 }
@@ -49,6 +50,7 @@ export function Sidebar({
   savedCount,
   tbdCount,
   remoteCount,
+  userLedCount,
   onPostEvent,
   onAskGemini,
 }: SidebarProps) {
@@ -137,11 +139,39 @@ export function Sidebar({
 
       <motion.button
         type="button"
+        onClick={() => onSelect("userLed")}
+        aria-pressed={selectedFilter === "userLed"}
+        whileHover={{ y: -1 }}
+        whileTap={{ scale: 0.98, y: 0 }}
+        transition={{ duration: 0.15, ease: "easeOut" }}
+        className={cn(
+          "mt-[21px] flex h-12 w-full items-center justify-center gap-2 rounded-xl text-[16px] font-bold transition-colors duration-150",
+          selectedFilter === "userLed"
+            ? "bg-brand text-white shadow-[0_6px_16px_rgb(23_102_232_/_0.28)]"
+            : "bg-brand-soft text-brand hover:bg-[#dde8fa]",
+        )}
+      >
+        <Users size={18} strokeWidth={2.3} aria-hidden />
+        User Led Events
+        {userLedCount > 0 && (
+          <span
+            className={cn(
+              "rounded-full px-2 py-[1px] text-[12px] font-bold",
+              selectedFilter === "userLed" ? "bg-white/20 text-white" : "bg-white text-brand",
+            )}
+          >
+            {userLedCount}
+          </span>
+        )}
+      </motion.button>
+
+      <motion.button
+        type="button"
         onClick={onPostEvent}
         whileHover={{ y: -1 }}
         whileTap={{ scale: 0.98, y: 0 }}
         transition={{ duration: 0.15, ease: "easeOut" }}
-        className="mt-[21px] flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand text-[16px] font-bold text-white shadow-[0_6px_16px_rgb(23_102_232_/_0.28)] transition-colors duration-150 hover:bg-brand-dark active:bg-brand-press"
+        className="mt-2.5 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand text-[16px] font-bold text-white shadow-[0_6px_16px_rgb(23_102_232_/_0.28)] transition-colors duration-150 hover:bg-brand-dark active:bg-brand-press"
       >
         <Plus size={19} strokeWidth={2.8} aria-hidden />
         Post Event

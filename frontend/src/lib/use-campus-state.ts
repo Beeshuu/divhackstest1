@@ -3,8 +3,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { CATEGORY_STYLE } from "./constants";
-import { formatClock, isEventToday, timeStatusFor, todayLabel } from "./utils";
+import {
+  dateLabelFrom,
+  dateTodayAt,
+  formatClock,
+  isEventToday,
+  timeStatusFromDates,
+} from "./utils";
+import { communityEventFromApi } from "./community-events";
 import { FEATURED_EVENT_ID, MOCK_EVENTS } from "@/data/mock-events";
+import { isUserLedEvent, USER_LED_EVENTS } from "@/data/user-led-events";
 import type {
   CampusEvent,
   DateFilter,
@@ -47,13 +55,29 @@ function syncUrl(event: CampusEvent | null) {
  * All interactive state for the Phase 2 frontend. Everything lives in React
  * memory: going/saved/created events reset on refresh by design.
  */
-export function useCampusState(initialEventId?: string) {
+function goingKey(userId?: number) {
+  return userId ? `campus-connect-going:${userId}` : "campus-connect-going";
+}
+
+function readGoing(userId?: number): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = window.localStorage.getItem(goingKey(userId));
+    const parsed = raw ? (JSON.parse(raw) as unknown) : [];
+    return new Set(Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === "string") : []);
+  } catch {
+    return new Set();
+  }
+}
+
+export function useCampusState(initialEventId?: string, userId?: number, userName?: string) {
   const [liveEvents, setLiveEvents] = useState<CampusEvent[]>([]);
+  const [communityEvents, setCommunityEvents] = useState<CampusEvent[]>([]);
   const [liveStatus, setLiveStatus] = useState<"idle" | "ready" | "error">("idle");
   const [createdEvents, setCreatedEvents] = useState<CampusEvent[]>([]);
   const [selectedId, setSelectedId] = useState(initialEventId ?? FEATURED_EVENT_ID);
   const [drawerOpen, setDrawerOpen] = useState(Boolean(initialEventId));
-  const [going, setGoing] = useState<Set<string>>(() => new Set());
+  const [going, setGoing] = useState<Set<string>>(() => readGoing(userId));
   const [saved, setSaved] = useState<Set<string>>(() => new Set());
   const [query, setQuery] = useState("");
   const [sidebarFilter, setSidebarFilter] = useState<SidebarFilter>("all");
@@ -63,9 +87,17 @@ export function useCampusState(initialEventId?: string) {
   const [toast, setToast] = useState<Toast | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  useEffect(() => {
+    setGoing(readGoing(userId));
+  }, [userId]);
+
+  useEffect(() => {
+    window.localStorage.setItem(goingKey(userId), JSON.stringify([...going]));
+  }, [userId, going]);
+
   const events = useMemo(
-    () => [...liveEvents, ...MOCK_EVENTS, ...createdEvents],
-    [liveEvents, createdEvents],
+    () => [...liveEvents, ...USER_LED_EVENTS, ...communityEvents, ...MOCK_EVENTS, ...createdEvents],
+    [liveEvents, communityEvents, createdEvents],
   );
   const selectedEvent = events.find((e) => e.id === selectedId);
 
@@ -79,7 +111,21 @@ export function useCampusState(initialEventId?: string) {
     } catch {
       setLiveStatus((prev) => (prev === "ready" ? "ready" : "error"));
     }
-  }, []);
+
+    try {
+      const response = await fetch("/api/events");
+      if (!response.ok) return;
+      const body: unknown = await response.json();
+      const rows = Array.isArray(body) ? body : [];
+      setCommunityEvents(
+        rows
+          .map((row) => communityEventFromApi(row as Parameters<typeof communityEventFromApi>[0], userId))
+          .filter((event): event is CampusEvent => Boolean(event)),
+      );
+    } catch {
+      // Seeded student events still fill User Led Events if the API is down.
+    }
+  }, [userId]);
 
   useEffect(() => {
     void refreshLiveEvents();
@@ -99,12 +145,13 @@ export function useCampusState(initialEventId?: string) {
         if (sidebarFilter === "saved" && !saved.has(event.id)) return false;
         if (sidebarFilter === "tbd") return event.locationKind === "tbd";
         if (sidebarFilter === "remote") return event.locationKind === "remote";
+        if (sidebarFilter === "userLed") return isUserLedEvent(event, userName);
         if (event.locationKind === "tbd" || event.locationKind === "remote") return false;
         if (categoryFilter !== "all" && event.category !== categoryFilter) return false;
         if (dateFilter === "today" && !isEventToday(event)) return false;
         return true;
       }),
-    [events, query, sidebarFilter, saved, categoryFilter, dateFilter],
+    [events, query, sidebarFilter, saved, categoryFilter, dateFilter, userName],
   );
 
   const showToast = useCallback((message: string) => {
@@ -145,9 +192,12 @@ export function useCampusState(initialEventId?: string) {
   const toggleSaved = useCallback((id: string) => toggleIn(setSaved, id), []);
 
   const createEvent = useCallback(
-    (draft: EventDraft): CampusEvent | null => {
+    (draft: EventDraft, hostName = "You"): CampusEvent | null => {
       if (!draft.point) return null;
       const style = CATEGORY_STYLE[draft.category];
+      const start = dateTodayAt(draft.startTime);
+      const end = dateTodayAt(draft.endTime);
+      if (end <= start) end.setDate(end.getDate() + 1);
       const event: CampusEvent = {
         id: `temp-${Date.now()}`,
         title: draft.title.trim(),
@@ -158,17 +208,21 @@ export function useCampusState(initialEventId?: string) {
         mapX: draft.point.x,
         mapY: draft.point.y,
         distance: "On campus",
-        timeStatus: timeStatusFor(draft.startTime, draft.endTime),
+        timeStatus: timeStatusFromDates(start, end),
         startTime: formatClock(draft.startTime),
         endTime: formatClock(draft.endTime),
-        dateLabel: todayLabel(),
-        startsAt: new Date().toISOString(),
+        dateLabel: dateLabelFrom(start),
+        startsAt: start.toISOString(),
+        endsAt: end.toISOString(),
         goingCount: 0,
         interestedCount: 0,
-        host: "You",
+        host: hostName,
         markerColor: style.markerColor,
         iconType: style.iconType,
         isTemporary: true,
+        locationKind: "mapped",
+        source: "user",
+        hostedByMe: true,
       };
       setCreatedEvents((prev) => [...prev, event]);
       setSelectedId(event.id);
@@ -216,6 +270,7 @@ export function useCampusState(initialEventId?: string) {
     liveStatus,
     tbdCount: events.filter((event) => event.locationKind === "tbd").length,
     remoteCount: events.filter((event) => event.locationKind === "remote").length,
+    userLedCount: events.filter((event) => isUserLedEvent(event, userName)).length,
     refreshLiveEvents,
   };
 }
