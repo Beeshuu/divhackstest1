@@ -1,20 +1,47 @@
+"use client";
+
+import { useState } from "react";
 import { MessageCircle, ShieldCheck } from "lucide-react";
 
 import type { AuthChallenge } from "@/lib/auth";
+
+function CopyLine({ number }: { number: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(number);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={() => void copy()}
+      className="font-bold underline decoration-blue-400 underline-offset-2"
+    >
+      {number}
+      <span className="ml-1 font-semibold no-underline">{copied ? "(copied)" : "(copy)"}</span>
+    </button>
+  );
+}
 
 export function PhotonCodeNotice({
   channel,
   phoneHint,
   e164,
   assignedLine,
-  lineLink,
   demoCode,
   connected,
   sendError,
   inboundVerified,
 }: Pick<
   AuthChallenge,
-  "channel" | "phoneHint" | "e164" | "assignedLine" | "lineLink" | "demoCode" | "connected" | "sendError"
+  "channel" | "phoneHint" | "e164" | "assignedLine" | "demoCode" | "connected" | "sendError"
 > & {
   inboundVerified?: boolean;
 }) {
@@ -35,7 +62,6 @@ export function PhotonCodeNotice({
 
   const allowlisted = sendError?.toLowerCase().includes("target not allowed");
   const number = e164 || phoneHint || "this phone";
-  const openLine = lineLink || (assignedLine ? `sms:${assignedLine}` : undefined);
 
   return (
     <div className="flex items-start gap-3 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3">
@@ -44,16 +70,10 @@ export function PhotonCodeNotice({
         {assignedLine ? (
           <>
             Photon is connected, and {number} is already on the Users list. Shared iMessage
-            can’t start the chat — text{" "}
-            {openLine ? (
-              <a href={openLine} className="font-bold underline">
-                {assignedLine}
-              </a>
-            ) : (
-              <span className="font-bold">{assignedLine}</span>
-            )}{" "}
-            any message and we’ll reply with the code. Then come back here, or use this demo
-            code: <span className="font-bold tracking-[0.18em]">{demoCode}</span>
+            can’t start the chat. On your iPhone, iMessage{" "}
+            <CopyLine number={assignedLine} /> any text — we’ll reply with the code. Don’t
+            open that number in this browser. Or use this demo code:{" "}
+            <span className="font-bold tracking-[0.18em]">{demoCode}</span>
           </>
         ) : allowlisted ? (
           <>

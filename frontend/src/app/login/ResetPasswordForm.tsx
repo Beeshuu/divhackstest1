@@ -25,7 +25,6 @@ export function ResetPasswordForm({
   const [phoneHint, setPhoneHint] = useState("");
   const [e164, setE164] = useState<string | undefined>();
   const [assignedLine, setAssignedLine] = useState<string | undefined>();
-  const [lineLink, setLineLink] = useState<string | undefined>();
   const [channel, setChannel] = useState("demo");
   const [connected, setConnected] = useState(false);
   const [sendError, setSendError] = useState<string | undefined>();
@@ -49,7 +48,6 @@ export function ResetPasswordForm({
       setPhoneHint(result.phoneHint);
       setE164(result.e164);
       setAssignedLine(result.assignedLine);
-      setLineLink(result.lineLink);
       setChannel(result.channel);
       setConnected(Boolean(result.connected));
       setSendError(result.sendError);
@@ -155,7 +153,6 @@ export function ResetPasswordForm({
             phoneHint={phoneHint}
             e164={e164}
             assignedLine={assignedLine}
-            lineLink={lineLink}
             demoCode={demoCode}
             connected={connected}
             sendError={sendError}
@@ -241,7 +238,6 @@ export function ResetPasswordForm({
                 setPhoneHint(result.phoneHint);
                 setE164(result.e164);
                 setAssignedLine(result.assignedLine);
-                setLineLink(result.lineLink);
                 setChannel(result.channel);
                 setConnected(Boolean(result.connected));
                 setSendError(result.sendError);
