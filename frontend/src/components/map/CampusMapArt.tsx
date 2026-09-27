@@ -32,9 +32,10 @@ const Y = {
   110: pctY(PLAN.y[110]),
 };
 
-const AVE = 11;
-const BRD = 15;
-const ST = 9;
+/** Half-widths — thick enough to read as streets, like the original drawing. */
+const AVE = 16;
+const BRD = 20;
+const ST = 13;
 
 function pctX(pct: number) {
   return (pct / 100) * VIEW_W;
@@ -53,13 +54,12 @@ interface Block {
   rx?: number;
 }
 
-/** Inset a building inside the block bounded by two avenues and two streets. */
-function inset(west: number, east: number, north: number, south: number, pad = 8, alt = false): Block {
+function inset(west: number, east: number, north: number, south: number, pad = 10, alt = false): Block {
   return {
     x: west + pad,
     y: north + pad,
-    w: east - west - pad * 2,
-    h: south - north - pad * 2,
+    w: Math.max(12, east - west - pad * 2),
+    h: Math.max(12, south - north - pad * 2),
     alt,
   };
 }
@@ -82,120 +82,111 @@ const bE = X.broadway + BRD;
 const aW = X.amsterdam - AVE;
 const aE = X.amsterdam + AVE;
 const mW = X.morningside - AVE;
-const mE = X.morningside + AVE;
 
-const s = (n: keyof typeof Y, dir: "n" | "s") => Y[n] + (dir === "s" ? ST : -ST);
+const southOf = (n: keyof typeof Y) => Y[n] + ST;
+const northOf = (n: keyof typeof Y) => Y[n] - ST;
 
-const barnard = inset(cE, bW, s(120, "s"), s(116, "n"));
-const barnardWest = inset(rE, cW, s(119, "s"), s(116, "n"));
-const mainN = inset(bE, aW, s(120, "s"), s(118, "n"));
-const lowQuad = inset(bE, aW, s(118, "s"), s(116, "n"));
-const southRow = inset(bE, aW, s(116, "s"), s(115, "n"));
-const butlerRow = inset(bE, aW, s(115, "s"), s(114, "n"));
-const eastMid = inset(aE, mW, s(118, "s"), s(116, "n"));
-const eastSouth = inset(aE, mW, s(116, "s"), s(114, "n"));
+const main = inset(bE, aW, southOf(120), northOf(118));
+const lowQuad = inset(bE, aW, southOf(118), northOf(116));
+const southRow = inset(bE, aW, southOf(116), northOf(115));
+const butlerRow = inset(bE, aW, southOf(115), northOf(114));
+const barnard = inset(cE, bW, southOf(120), northOf(116));
+const barnardWest = inset(rE, cW, southOf(119), northOf(116));
+const eastMid = inset(aE, mW, southOf(118), northOf(116));
 
 const CAMPUS_BUILDINGS: Block[] = [
-  { x: X.riverside - 62, y: 14, w: 48, h: 42, alt: true, rx: 16 },
-  { x: X.riverside - 58, y: Y[122] + 14, w: 44, h: 72, alt: true },
+  { x: X.riverside - 70, y: 16, w: 56, h: 46, alt: true, rx: 18 },
+  { x: X.riverside - 66, y: Y[122] + 16, w: 50, h: 78, alt: true },
 
-  // Teachers College / 120–122
-  slice(inset(bE, aW, s(122, "s"), s(121, "n")), 0.02, 0.12, 0.28, 0.76),
-  slice(inset(bE, aW, s(122, "s"), s(121, "n")), 0.34, 0.08, 0.3, 0.82),
-  slice(inset(bE, aW, s(122, "s"), s(121, "n")), 0.68, 0.14, 0.3, 0.72),
-  inset(bE, aW, s(121, "s"), s(120, "n")),
+  slice(inset(bE, aW, southOf(122), northOf(121)), 0.03, 0.12, 0.3, 0.76, true),
+  slice(inset(bE, aW, southOf(122), northOf(121)), 0.37, 0.1, 0.28, 0.8),
+  slice(inset(bE, aW, southOf(122), northOf(121)), 0.69, 0.14, 0.28, 0.74, true),
+  inset(bE, aW, southOf(121), northOf(120)),
 
-  // Science / northwest campus 118–120
-  slice(mainN, 0.02, 0.04, 0.22, 0.42),
-  slice(mainN, 0.28, 0.02, 0.28, 0.46),
-  slice(mainN, 0.6, 0.04, 0.18, 0.42),
-  slice(mainN, 0.82, 0.06, 0.16, 0.4),
-  slice(mainN, 0.02, 0.54, 0.2, 0.42),
-  slice(mainN, 0.26, 0.52, 0.2, 0.44),
-  slice(mainN, 0.5, 0.5, 0.16, 0.46),
-  slice(mainN, 0.7, 0.52, 0.28, 0.44),
+  slice(main, 0.03, 0.06, 0.3, 0.4),
+  slice(main, 0.37, 0.04, 0.3, 0.42),
+  slice(main, 0.71, 0.06, 0.26, 0.4),
+  slice(main, 0.03, 0.54, 0.22, 0.4),
+  slice(main, 0.29, 0.52, 0.2, 0.42),
+  slice(main, 0.53, 0.5, 0.18, 0.44),
+  slice(main, 0.75, 0.52, 0.22, 0.42),
 
-  // Low Library quad 116–118
-  slice(lowQuad, 0.02, 0.08, 0.16, 0.38),
-  slice(lowQuad, 0.2, 0.18, 0.12, 0.28),
-  { ...slice(lowQuad, 0.36, 0.1, 0.28, 0.42), rx: 10 },
-  slice(lowQuad, 0.68, 0.16, 0.12, 0.32),
-  slice(lowQuad, 0.82, 0.12, 0.16, 0.36),
-  slice(lowQuad, 0.02, 0.56, 0.2, 0.38),
-  slice(lowQuad, 0.26, 0.62, 0.18, 0.3),
-  slice(lowQuad, 0.56, 0.58, 0.2, 0.34),
-  slice(lowQuad, 0.8, 0.56, 0.18, 0.36),
+  slice(lowQuad, 0.03, 0.08, 0.2, 0.36),
+  slice(lowQuad, 0.26, 0.16, 0.14, 0.28),
+  { ...slice(lowQuad, 0.43, 0.08, 0.28, 0.44), rx: 10 },
+  slice(lowQuad, 0.75, 0.12, 0.22, 0.34),
+  slice(lowQuad, 0.03, 0.56, 0.22, 0.38),
+  slice(lowQuad, 0.76, 0.56, 0.21, 0.38),
 
-  // South of College Walk
-  slice(southRow, 0.02, 0.1, 0.18, 0.8),
-  slice(southRow, 0.22, 0.08, 0.16, 0.84),
-  slice(southRow, 0.82, 0.1, 0.16, 0.8),
-  slice(butlerRow, 0.02, 0.08, 0.2, 0.84),
-  { ...slice(butlerRow, 0.28, 0.04, 0.36, 0.9), rx: 8 },
-  slice(butlerRow, 0.68, 0.1, 0.14, 0.8),
-  slice(butlerRow, 0.84, 0.08, 0.14, 0.84),
+  slice(southRow, 0.03, 0.1, 0.2, 0.8),
+  slice(southRow, 0.26, 0.08, 0.18, 0.84),
+  slice(southRow, 0.78, 0.1, 0.19, 0.8),
+  slice(butlerRow, 0.03, 0.1, 0.22, 0.8),
+  { ...slice(butlerRow, 0.29, 0.06, 0.4, 0.88), rx: 7 },
+  slice(butlerRow, 0.73, 0.1, 0.24, 0.8),
 
-  // Residences 110–114
-  inset(bE, aW, s(114, "s"), s(113, "n")),
-  inset(bE, aW, s(113, "s"), s(112, "n"), 8, true),
-  slice(inset(bE, aW, s(112, "s"), s(111, "n"), 8, true), 0.02, 0.1, 0.46, 0.8, true),
-  slice(inset(bE, aW, s(112, "s"), s(111, "n"), 8, true), 0.52, 0.12, 0.46, 0.76, true),
-  inset(bE, aW, s(111, "s"), s(110, "n"), 8, true),
+  inset(bE, aW, southOf(114), northOf(113)),
+  inset(bE, aW, southOf(113), northOf(112), 10, true),
+  slice(inset(bE, aW, southOf(112), northOf(111), 10, true), 0.03, 0.12, 0.45, 0.76, true),
+  slice(inset(bE, aW, southOf(112), northOf(111), 10, true), 0.52, 0.12, 0.45, 0.76, true),
+  inset(bE, aW, southOf(111), northOf(110), 10, true),
 
-  // Barnard
-  slice(barnardWest, 0.04, 0.04, 0.92, 0.28),
-  slice(barnardWest, 0.04, 0.38, 0.92, 0.28),
-  slice(barnardWest, 0.04, 0.72, 0.92, 0.24),
-  slice(barnard, 0.06, 0.04, 0.88, 0.18),
-  slice(barnard, 0.08, 0.28, 0.84, 0.22),
-  slice(barnard, 0.06, 0.56, 0.4, 0.38),
-  slice(barnard, 0.52, 0.56, 0.42, 0.38),
+  slice(barnardWest, 0.06, 0.04, 0.88, 0.28),
+  slice(barnardWest, 0.06, 0.38, 0.88, 0.26),
+  slice(barnardWest, 0.06, 0.7, 0.88, 0.26),
+  slice(barnard, 0.08, 0.05, 0.84, 0.2),
+  slice(barnard, 0.1, 0.3, 0.8, 0.22),
+  slice(barnard, 0.08, 0.58, 0.4, 0.36),
+  slice(barnard, 0.52, 0.58, 0.4, 0.36),
 
-  // West of Broadway, south of Barnard
-  inset(cE, bW, s(116, "s"), s(115, "n"), 8, true),
-  inset(cE, bW, s(115, "s"), s(114, "n"), 8, true),
-  inset(cE, bW, s(114, "s"), s(113, "n"), 8, true),
-  inset(cE, bW, s(113, "s"), s(112, "n"), 8, true),
-  inset(cE, bW, s(112, "s"), s(111, "n"), 8, true),
+  inset(cE, bW, southOf(116), northOf(115), 10, true),
+  inset(cE, bW, southOf(115), northOf(114), 10, true),
+  inset(cE, bW, southOf(114), northOf(113), 10, true),
+  inset(cE, bW, southOf(113), northOf(112), 10, true),
+  inset(cE, bW, southOf(112), northOf(111), 10, true),
 
-  // Claremont / Riverside north
-  inset(cE, bW, s(122, "s"), s(121, "n"), 8, true),
-  inset(cE, bW, s(121, "s"), s(120, "n")),
-  inset(rE, cW, s(121, "s"), s(120, "n"), 8, true),
-  inset(rE, cW, s(120, "s"), s(119, "n"), 8, true),
+  inset(cE, bW, southOf(122), northOf(121), 10, true),
+  inset(cE, bW, southOf(121), northOf(120)),
+  inset(rE, cW, southOf(121), northOf(120), 10, true),
+  inset(rE, cW, southOf(120), northOf(119), 10, true),
 
-  // East of Amsterdam
-  inset(aE, mW, s(122, "s"), s(121, "n"), 8, true),
-  inset(aE, mW, s(121, "s"), s(120, "n"), 8, true),
-  inset(aE, mW, s(120, "s"), s(119, "n")),
-  inset(aE, mW, s(119, "s"), s(118, "n")),
-  slice(eastMid, 0.04, 0.06, 0.58, 0.42),
-  slice(eastMid, 0.68, 0.1, 0.28, 0.36),
-  slice(eastMid, 0.06, 0.56, 0.5, 0.38),
-  slice(eastSouth, 0.06, 0.08, 0.88, 0.4),
-  slice(eastSouth, 0.08, 0.56, 0.84, 0.38),
-  inset(aE, mW, s(114, "s"), s(113, "n"), 8, true),
+  inset(aE, mW, southOf(122), northOf(121), 10, true),
+  inset(aE, mW, southOf(121), northOf(120), 10, true),
+  inset(aE, mW, southOf(120), northOf(119)),
+  inset(aE, mW, southOf(119), northOf(118)),
+  slice(eastMid, 0.06, 0.08, 0.56, 0.4),
+  slice(eastMid, 0.68, 0.12, 0.26, 0.36),
+  slice(eastMid, 0.08, 0.56, 0.5, 0.36),
+  inset(aE, mW, southOf(116), northOf(114), 10, true),
+  inset(aE, mW, southOf(114), northOf(113), 10, true),
 ];
 
-const CATHEDRAL = {
-  ...inset(aE + 18, mW - 6, s(113, "s") + 6, s(110, "n") - 10),
-  rx: 14,
+const CATHEDRAL: Block = {
+  ...inset(aE + 14, mW - 4, southOf(113) + 4, northOf(110) - 8),
+  rx: 12,
 };
 
 const LAWNS: Block[] = [
-  { x: 0, y: 0, w: X.riverside - 6, h: VIEW_H },
-  { x: X.morningside + 8, y: 0, w: VIEW_W - X.morningside - 8, h: VIEW_H },
-  slice(southRow, 0.4, 0.12, 0.4, 0.76),
-  { x: lowQuad.x + lowQuad.w * 0.34, y: lowQuad.y + lowQuad.h * 0.54, w: lowQuad.w * 0.32, h: lowQuad.h * 0.38 },
-  { x: barnard.x + 10, y: barnard.y + barnard.h * 0.3, w: barnard.w - 20, h: 22 },
-  { x: CATHEDRAL.x - 16, y: CATHEDRAL.y - 18, w: CATHEDRAL.w + 32, h: CATHEDRAL.h + 36 },
-  { x: X.riverside - 40, y: 8, w: 52, h: 46 },
+  { x: 0, y: 0, w: X.riverside - 8, h: VIEW_H },
+  { x: X.morningside + 10, y: 0, w: VIEW_W - X.morningside - 10, h: VIEW_H },
+  {
+    x: southRow.x + southRow.w * 0.46,
+    y: southRow.y + 6,
+    w: southRow.w * 0.3,
+    h: southRow.h - 12,
+  },
+  {
+    x: lowQuad.x + lowQuad.w * 0.42,
+    y: lowQuad.y + lowQuad.h * 0.56,
+    w: lowQuad.w * 0.3,
+    h: lowQuad.h * 0.36,
+  },
+  { x: CATHEDRAL.x - 14, y: CATHEDRAL.y - 16, w: CATHEDRAL.w + 28, h: CATHEDRAL.h + 32 },
 ];
 
 const WALKS: Block[] = [
-  { x: bE, y: Y[116] - 7, w: aW - bE, h: 14 },
-  { x: bE + 8, y: lowQuad.y + lowQuad.h * 0.52, w: aW - bE - 16, h: 8 },
-  { x: (X.broadway + X.amsterdam) / 2 - 7, y: Y[118] + 4, w: 14, h: Y[114] - Y[118] - 8 },
+  { x: bE, y: Y[116] - 8, w: aW - bE, h: 16 },
+  { x: (X.broadway + X.amsterdam) / 2 - 8, y: Y[118] + 6, w: 16, h: Y[114] - Y[118] - 12 },
 ];
 
 function buildTrees() {
@@ -206,40 +197,31 @@ function buildTrees() {
   };
 
   const lanes: Array<[number, number, number, number]> = [
-    [18, 20, 18, VIEW_H - 20],
-    [X.riverside - 22, 30, X.riverside - 22, VIEW_H - 24],
-    [X.riverside + 20, 40, X.riverside + 20, VIEW_H - 30],
-    [X.claremont - 18, 80, X.claremont - 18, Y[110] - 10],
-    [X.claremont + 18, 80, X.claremont + 18, Y[110] - 10],
-    [X.broadway - 22, 40, X.broadway - 22, VIEW_H - 20],
-    [X.broadway + 22, 40, X.broadway + 22, VIEW_H - 20],
-    [X.amsterdam - 20, 40, X.amsterdam - 20, VIEW_H - 20],
-    [X.amsterdam + 20, 40, X.amsterdam + 20, VIEW_H - 20],
-    [X.morningside - 20, 30, X.morningside - 20, VIEW_H - 20],
-    [X.morningside + 22, 20, X.morningside + 22, VIEW_H - 16],
-    [VIEW_W - 16, 24, VIEW_W - 16, VIEW_H - 20],
-    [40, Y[122], X.morningside - 10, Y[122]],
-    [40, Y[120], X.morningside - 10, Y[120]],
-    [X.broadway + 16, Y[116], X.amsterdam - 16, Y[116]],
-    [X.broadway + 20, Y[115], X.amsterdam - 20, Y[115]],
-    [X.broadway + 24, Y[114], X.amsterdam - 24, Y[114]],
-    [80, Y[110], X.amsterdam - 10, Y[110]],
-    [lowQuad.x + 20, lowQuad.y + lowQuad.h * 0.7, lowQuad.x + lowQuad.w - 20, lowQuad.y + lowQuad.h * 0.7],
-    [CATHEDRAL.x - 8, CATHEDRAL.y - 10, CATHEDRAL.x + CATHEDRAL.w + 8, CATHEDRAL.y - 10],
-    [CATHEDRAL.x - 8, CATHEDRAL.y + CATHEDRAL.h + 10, CATHEDRAL.x + CATHEDRAL.w + 8, CATHEDRAL.y + CATHEDRAL.h + 10],
+    [22, 30, 22, VIEW_H - 24],
+    [X.riverside - 26, 40, X.riverside - 26, VIEW_H - 28],
+    [X.morningside + 26, 36, X.morningside + 26, VIEW_H - 24],
+    [VIEW_W - 18, 28, VIEW_W - 18, VIEW_H - 22],
+    [X.broadway - 28, 50, X.broadway - 28, VIEW_H - 30],
+    [X.broadway + 28, 50, X.broadway + 28, VIEW_H - 30],
+    [X.amsterdam - 26, 50, X.amsterdam - 26, VIEW_H - 30],
+    [X.amsterdam + 26, 50, X.amsterdam + 26, VIEW_H - 30],
+    [X.broadway + 30, Y[116], X.amsterdam - 30, Y[116]],
+    [X.broadway + 36, southRow.y + southRow.h * 0.5, X.amsterdam - 90, southRow.y + southRow.h * 0.5],
+    [CATHEDRAL.x - 6, CATHEDRAL.y - 12, CATHEDRAL.x + CATHEDRAL.w + 6, CATHEDRAL.y - 12],
+    [CATHEDRAL.x - 6, CATHEDRAL.y + CATHEDRAL.h + 8, CATHEDRAL.x + CATHEDRAL.w + 6, CATHEDRAL.y + CATHEDRAL.h + 8],
   ];
 
   const trees: Array<{ x: number; y: number; r: number; tone: number }> = [];
   for (const [x0, y0, x1, y1] of lanes) {
     const len = Math.hypot(x1 - x0, y1 - y0);
-    const count = Math.round(len / 32);
+    const count = Math.round(len / 46);
     for (let i = 0; i < count; i++) {
-      if (rand() < 0.18) continue;
+      if (rand() < 0.32) continue;
       const t = (i + 0.5) / count;
       trees.push({
-        x: x0 + (x1 - x0) * t + (rand() - 0.5) * 18,
-        y: y0 + (y1 - y0) * t + (rand() - 0.5) * 18,
-        r: 6 + rand() * 6.5,
+        x: x0 + (x1 - x0) * t + (rand() - 0.5) * 14,
+        y: y0 + (y1 - y0) * t + (rand() - 0.5) * 14,
+        r: 5.2 + rand() * 4.2,
         tone: rand(),
       });
     }
@@ -288,7 +270,7 @@ export function CampusMapArt() {
           height={lawn.h}
           rx={i < 2 ? 0 : 8}
           fill="var(--color-map-lawn)"
-          opacity={i < 2 ? 0.88 : 1}
+          opacity={i < 2 ? 0.9 : 1}
         />
       ))}
 
@@ -319,8 +301,8 @@ export function CampusMapArt() {
         {[0, 1, 2, 3, 4].map((i) => (
           <rect
             key={`step-${i}`}
-            x={lowQuad.x + lowQuad.w * 0.36}
-            y={lowQuad.y + lowQuad.h * 0.54 + i * 10}
+            x={lowQuad.x + lowQuad.w * 0.43}
+            y={lowQuad.y + lowQuad.h * 0.56 + i * 9}
             width={lowQuad.w * 0.28}
             height={4}
             rx={2}
@@ -329,23 +311,18 @@ export function CampusMapArt() {
         ))}
       </g>
       <circle
-        cx={lowQuad.x + lowQuad.w * 0.5}
-        cy={lowQuad.y + lowQuad.h * 0.92}
-        r={16}
+        cx={lowQuad.x + lowQuad.w * 0.57}
+        cy={lowQuad.y + lowQuad.h * 0.94}
+        r={15}
         fill="#EFEBE3"
         stroke="#DDD8CF"
         strokeWidth={2}
       />
 
-      {CAMPUS_BUILDINGS.map((b, i) => (
-        <Building key={`b-${i}`} {...b} />
-      ))}
-      <Building {...CATHEDRAL} />
-
       {TREES.map((t, i) => (
         <g key={`t-${i}`}>
           <ellipse
-            cx={t.x + 1.4}
+            cx={t.x + 1.2}
             cy={t.y + t.r * 0.6}
             rx={t.r * 0.85}
             ry={t.r * 0.4}
@@ -356,6 +333,11 @@ export function CampusMapArt() {
           <circle cx={t.x - t.r * 0.26} cy={t.y - t.r * 0.28} r={t.r * 0.44} fill="#C2DBAC" opacity={0.5} />
         </g>
       ))}
+
+      {CAMPUS_BUILDINGS.map((b, i) => (
+        <Building key={`b-${i}`} {...b} />
+      ))}
+      <Building {...CATHEDRAL} />
     </svg>
   );
 }
@@ -382,15 +364,15 @@ function Street({ x, y, w, h, vertical = false }: Block & { vertical?: boolean }
 }
 
 function Building({ x, y, w, h, alt = false, rx = 4 }: Block) {
-  const cols = Math.max(2, Math.round(w / 28));
-  const rows = Math.max(1, Math.round(h / 32));
-  const pad = Math.min(9, Math.max(5, w * 0.08));
+  const cols = Math.max(2, Math.round(w / 30));
+  const rows = Math.max(1, Math.round(h / 34));
+  const pad = 10;
   const stepX = (w - pad * 2) / cols;
   const stepY = (h - pad * 2) / rows;
 
   return (
     <g>
-      <rect x={x + 3} y={y + 4} width={w} height={h} rx={rx} fill="#0F2547" opacity={0.1} />
+      <rect x={x + 4} y={y + 5} width={w} height={h} rx={rx} fill="#0F2547" opacity={0.1} />
       <rect
         x={x}
         y={y}
@@ -399,9 +381,16 @@ function Building({ x, y, w, h, alt = false, rx = 4 }: Block) {
         rx={rx}
         fill={alt ? "url(#cc-roof-alt)" : "url(#cc-roof)"}
         stroke="var(--color-map-building-edge)"
-        strokeWidth={1.5}
+        strokeWidth={1.6}
       />
-      <rect x={x + 6} y={y + 6} width={Math.max(0, w - 12)} height={Math.max(0, h - 12)} rx={Math.max(2, rx - 1)} fill={alt ? "#CBD4E3" : "#D2DCEA"} />
+      <rect
+        x={x + 7}
+        y={y + 7}
+        width={Math.max(0, w - 14)}
+        height={Math.max(0, h - 14)}
+        rx={Math.max(2, rx - 1)}
+        fill={alt ? "#CBD4E3" : "#D2DCEA"}
+      />
       <g opacity={alt ? 0.55 : 0.68}>
         {Array.from({ length: rows }).map((_, r) =>
           Array.from({ length: cols }).map((_, c) => (
@@ -410,8 +399,8 @@ function Building({ x, y, w, h, alt = false, rx = 4 }: Block) {
               x={x + pad + c * stepX + stepX * 0.22}
               y={y + pad + r * stepY + stepY * 0.3}
               width={stepX * 0.46}
-              height={Math.max(2.4, stepY * 0.28)}
-              rx={1.1}
+              height={stepY * 0.3}
+              rx={1.2}
               fill="#B5C7E1"
             />
           )),
