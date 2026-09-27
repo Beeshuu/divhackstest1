@@ -57,7 +57,7 @@ export function TopNavbar({ onOpenSidebar, onAskGemini, ...search }: TopNavbarPr
         </span>
       </div>
 
-      <div className="min-w-0 flex-1 pl-2 pr-3 tablet:pl-6 desktop:pl-8">
+      <div className="min-w-0 flex-1 overflow-hidden pl-2 pr-3 tablet:pl-6 desktop:pl-8">
         <SearchField {...search} />
       </div>
 
@@ -191,10 +191,10 @@ function AccountCluster({ onAskGemini }: { onAskGemini: () => void }) {
         whileHover={{ y: -1 }}
         whileTap={{ scale: 0.94 }}
         transition={{ duration: 0.14, ease: "easeOut" }}
-        className="flex h-10 items-center gap-1.5 rounded-full px-2 text-ink-soft transition-colors duration-150 hover:bg-[#f3eefe] hover:text-[#6D28D9] tablet:px-3"
+        className="hidden h-10 items-center gap-1.5 rounded-full px-3 text-ink-soft transition-colors duration-150 hover:bg-[#f3eefe] hover:text-[#6D28D9] tablet:flex"
       >
         <GeminiSparkle size={18} />
-        <span className="hidden text-[14px] font-bold tablet:inline">Ask Gemini</span>
+        <span className="text-[14px] font-bold">Ask Gemini</span>
       </motion.button>
 
       <motion.button

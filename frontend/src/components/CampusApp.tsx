@@ -5,6 +5,7 @@ import { AnimatePresence } from "framer-motion";
 
 import { CreateEventModal } from "@/components/events/CreateEventModal";
 import { EventDrawer } from "@/components/events/EventDrawer";
+import { AskGeminiFab } from "@/components/gemini/AskGeminiFab";
 import { AskGeminiPanel } from "@/components/gemini/AskGeminiPanel";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopNavbar } from "@/components/layout/TopNavbar";
@@ -277,6 +278,7 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
             onReset={state.clearFilters}
           />
           <MapToast toast={state.toast} onDismiss={state.dismissToast} />
+          {!geminiOpen && !sidebarOpen && <AskGeminiFab onClick={openGemini} />}
           <AskGeminiPanel
             open={geminiOpen}
             onClose={() => setGeminiOpen(false)}
