@@ -27,13 +27,18 @@ interface AskGeminiPanelProps {
   onSelectEvent: (event: CampusEvent) => void;
 }
 
-const SUGGESTIONS = ["What's happening now?", "Where's free food?", "How do I post an event?"];
+const SUGGESTIONS = [
+  "What's happening now?",
+  "Any student-posted events?",
+  "What's remote?",
+  "How do I reject an event?",
+];
 
 function seedMessage(): Message {
   return {
     id: 0,
     role: "assistant",
-    text: "Hi — I'm Gemini, your Campus Connect assistant. Ask me what's happening at Columbia, where the free food is, or how to post an event.",
+    text: "Hi — I'm Gemini, your Campus Connect assistant. Ask me what's happening today, which events are student-posted, what's remote or TBD, how to reject a pin, or how reminders work.",
   };
 }
 

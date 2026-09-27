@@ -1,0 +1,157 @@
+"use client";
+
+import { AnimatePresence, motion } from "framer-motion";
+import { CalendarDays, Check, MapPin, X } from "lucide-react";
+
+import { CategoryGlyph } from "@/components/icons/CategoryIcons";
+import { cn } from "@/lib/utils";
+import type { CampusEvent, SidebarFilter } from "@/types/event";
+
+interface LocationEventsListProps {
+  filter: SidebarFilter;
+  events: CampusEvent[];
+  onSelect: (event: CampusEvent) => void;
+  goingIds?: Set<string>;
+  onAccept?: (event: CampusEvent) => void;
+  onReject?: (event: CampusEvent) => void;
+}
+
+const COPY: Partial<Record<SidebarFilter, { title: string; empty: string; source: string }>> = {
+  tbd: {
+    title: "TBD locations",
+    empty: "University Life has no events without a listed location right now.",
+    source: "From University Life · updates with their calendar",
+  },
+  remote: {
+    title: "Remote events",
+    empty: "University Life has no remote or online events right now.",
+    source: "From University Life · updates with their calendar",
+  },
+  userLed: {
+    title: "User Led Events",
+    empty: "No student-posted events right now. Use Post Event to add one.",
+    source: "Posted by students on Campus Connect",
+  },
+  saved: {
+    title: "Saved",
+    empty: "You haven't saved any events yet — use the bookmark on an event.",
+    source: "Bookmarked listings, including remote and TBD",
+  },
+};
+
+const ACTION =
+  "grid h-8 w-8 shrink-0 place-items-center rounded-full border transition-colors duration-150";
+
+/** List that replaces map pins when TBD or Remote is selected. */
+export function LocationEventsList({
+  filter,
+  events,
+  onSelect,
+  goingIds,
+  onAccept,
+  onReject,
+}: LocationEventsListProps) {
+  const copy = COPY[filter];
+  if (!copy) return null;
+  const showActions = filter === "userLed" && (onAccept || onReject);
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        key={filter}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 6 }}
+        transition={{ duration: 0.18 }}
+        className="absolute inset-x-3 top-[76px] z-20 max-h-[min(68vh,560px)] overflow-hidden rounded-[18px] border border-line bg-panel shadow-float tablet:inset-x-auto tablet:left-4 tablet:w-[min(420px,calc(100%-32px))]"
+      >
+        <div className="flex items-center justify-between px-4 py-3">
+          <div>
+            <p className="text-[15px] font-extrabold text-ink">{copy.title}</p>
+            <p className="text-[12.5px] font-medium text-muted">{copy.source}</p>
+          </div>
+          <span className="rounded-full bg-brand-tint px-2 py-0.5 text-[12px] font-bold text-brand">
+            {events.length}
+          </span>
+        </div>
+        <div aria-hidden className="mx-3 h-px bg-line" />
+        <ul className="max-h-[min(56vh,460px)] overflow-y-auto p-1.5 scrollbar-none">
+          {events.length === 0 ? (
+            <li className="px-3 py-8 text-center text-[13.5px] font-medium text-muted">{copy.empty}</li>
+          ) : (
+            events.map((event) => {
+              const accepted = goingIds?.has(event.id) ?? false;
+              return (
+              <li key={event.id}>
+                <div className="flex items-start gap-1 rounded-[12px] pr-1.5 transition-colors hover:bg-brand-tint">
+                <button
+                  type="button"
+                  onClick={() => onSelect(event)}
+                  className="flex min-w-0 flex-1 items-start gap-3 rounded-[12px] px-3 py-2.5 text-left"
+                >
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-field">
+                    <CategoryGlyph category={event.category} size={17} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[14.5px] font-bold text-ink">{event.title}</span>
+                    <span className="mt-[3px] flex items-center gap-1.5 text-[12.5px] font-medium text-muted">
+                      <MapPin size={12} strokeWidth={2.3} aria-hidden />
+                      <span className="truncate">
+                        {event.locationName}
+                        {filter === "userLed" ? ` · ${event.host}` : ""}
+                      </span>
+                    </span>
+                    <span className="mt-[2px] flex items-center gap-1.5 text-[12.5px] font-medium text-faint">
+                      <CalendarDays size={12} strokeWidth={2.3} aria-hidden />
+                      <span className="truncate">
+                        {event.dateLabel} · {event.startTime}–{event.endTime}
+                      </span>
+                    </span>
+                  </span>
+                </button>
+                {showActions && (
+                  <div className="flex shrink-0 items-center gap-1.5 pt-3 pr-1">
+                    {onAccept && (
+                      <button
+                        type="button"
+                        aria-label={accepted ? `You're going to ${event.title}` : `Accept ${event.title}`}
+                        aria-pressed={accepted}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!accepted) onAccept(event);
+                        }}
+                        className={cn(
+                          ACTION,
+                          accepted
+                            ? "border-brand bg-brand text-white"
+                            : "border-line bg-white text-brand hover:border-brand/40 hover:bg-brand-tint",
+                        )}
+                      >
+                        <Check size={15} strokeWidth={2.8} />
+                      </button>
+                    )}
+                    {onReject && (
+                      <button
+                        type="button"
+                        aria-label={`Reject ${event.title}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onReject(event);
+                        }}
+                        className={`${ACTION} border-line bg-white text-[#8A96AB] hover:border-[#F5453A]/30 hover:bg-[#FEF2F2] hover:text-[#F5453A]`}
+                      >
+                        <X size={15} strokeWidth={2.8} />
+                      </button>
+                    )}
+                  </div>
+                )}
+                </div>
+              </li>
+              );
+            })
+          )}
+        </ul>
+      </motion.div>
+    </AnimatePresence>
+  );
+}

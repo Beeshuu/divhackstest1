@@ -2,18 +2,10 @@
 
 import type { ComponentType } from "react";
 import { motion } from "framer-motion";
-import { Plus, X } from "lucide-react";
+import { MapPinOff, Monitor, Plus, Users, X } from "lucide-react";
 
 import { GeminiSparkle } from "@/components/gemini/GeminiSparkle";
-import {
-  BasketballIcon,
-  BookmarkIcon,
-  BriefcaseIcon,
-  HouseIcon,
-  OpenBookIcon,
-  PeopleIcon,
-  PizzaSliceIcon,
-} from "@/components/icons/CategoryIcons";
+import { BookmarkIcon, HouseIcon } from "@/components/icons/CategoryIcons";
 import { cn } from "@/lib/utils";
 import type { SidebarFilter } from "@/types/event";
 
@@ -33,11 +25,6 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { label: "Happening Now", filter: "all", icon: HouseIcon, iconClass: "text-brand" },
-  { label: "Free Food", filter: "Free Food", icon: PizzaSliceIcon, iconClass: "" },
-  { label: "Social", filter: "Social", icon: PeopleIcon, iconClass: "text-[#A24BEE]" },
-  { label: "Academic", filter: "Academic", icon: OpenBookIcon, iconClass: "" },
-  { label: "Career", filter: "Career", icon: BriefcaseIcon, iconClass: "" },
-  { label: "Sports", filter: "Sports", icon: BasketballIcon, iconClass: "" },
   { label: "Saved", filter: "saved", icon: BookmarkIcon, iconClass: "text-[#3B4A66]" },
 ];
 
@@ -47,15 +34,29 @@ interface SidebarProps {
   selected: SidebarFilter;
   onSelect: (filter: SidebarFilter) => void;
   savedCount: number;
+  tbdCount: number;
+  remoteCount: number;
+  userLedCount: number;
   onPostEvent: () => void;
   onAskGemini: () => void;
 }
 
 /** Category rail: filters the events shown on the map. */
-export function Sidebar({ isOpen, onClose, selected: selectedFilter, onSelect, savedCount, onPostEvent, onAskGemini }: SidebarProps) {
+export function Sidebar({
+  isOpen,
+  onClose,
+  selected: selectedFilter,
+  onSelect,
+  savedCount,
+  tbdCount,
+  remoteCount,
+  userLedCount,
+  onPostEvent,
+  onAskGemini,
+}: SidebarProps) {
   return (
     <aside
-      aria-label="Event categories"
+      aria-label="Campus navigation"
       className={cn(
         "fixed bottom-0 left-0 top-[72px] z-[60] flex w-[276px] shrink-0 flex-col overflow-y-auto border-r border-line-strong bg-rail px-4 pt-4 shadow-float transition-transform duration-200 ease-out scrollbar-none",
         "tablet:static tablet:z-auto tablet:w-[236px] tablet:translate-x-0 tablet:px-3.5 tablet:shadow-none desktop:w-[276px] desktop:px-4",
@@ -79,7 +80,8 @@ export function Sidebar({ isOpen, onClose, selected: selectedFilter, onSelect, s
             <button
               key={item.label}
               type="button"
-              aria-current={selected ? "page" : undefined}
+              aria-current={item.filter === "all" && selected ? "page" : undefined}
+              aria-pressed={item.filter === "saved" ? selected : undefined}
               onClick={() => onSelect(item.filter)}
               className={cn(
                 "flex h-[49px] items-center gap-[18px] rounded-[13px] px-[18px] text-left text-[15.5px] transition-colors duration-150 ease-out",
@@ -100,13 +102,77 @@ export function Sidebar({ isOpen, onClose, selected: selectedFilter, onSelect, s
         })}
       </nav>
 
+      <div className="mt-4 border-t border-line pt-3" aria-label="Events without a mapped location">
+        <p className="px-[18px] pb-1.5 text-[11.5px] font-bold uppercase tracking-[0.08em] text-faint">
+          Location
+        </p>
+        {(
+          [
+            { label: "TBD locations", filter: "tbd" as const, icon: MapPinOff, count: tbdCount },
+            { label: "Remote", filter: "remote" as const, icon: Monitor, count: remoteCount },
+          ] as const
+        ).map((item) => {
+          const selected = item.filter === selectedFilter;
+          const Icon = item.icon;
+          return (
+            <button
+              key={item.label}
+              type="button"
+              aria-current={selected ? "page" : undefined}
+              aria-pressed={selected}
+              onClick={() => onSelect(item.filter)}
+              className={cn(
+                "flex h-[49px] w-full items-center gap-[18px] rounded-[13px] px-[18px] text-left text-[15.5px] transition-colors duration-150 ease-out",
+                selected ? "bg-brand-tint font-bold text-brand" : "font-semibold text-ink hover:bg-[#f0f3f9]",
+              )}
+            >
+              <Icon size={22} strokeWidth={2.1} aria-hidden className="shrink-0" />
+              <span className="truncate">{item.label}</span>
+              {item.count > 0 && (
+                <span className="ml-auto rounded-full bg-brand-tint px-2 py-[1px] text-[12px] font-bold text-brand">
+                  {item.count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      <motion.button
+        type="button"
+        onClick={() => onSelect("userLed")}
+        aria-pressed={selectedFilter === "userLed"}
+        whileHover={{ y: -1 }}
+        whileTap={{ scale: 0.98, y: 0 }}
+        transition={{ duration: 0.15, ease: "easeOut" }}
+        className={cn(
+          "mt-[21px] flex h-12 w-full items-center justify-center gap-2 rounded-xl text-[16px] font-bold transition-colors duration-150",
+          selectedFilter === "userLed"
+            ? "bg-brand text-white shadow-[0_6px_16px_rgb(23_102_232_/_0.28)]"
+            : "bg-brand-soft text-brand hover:bg-[#dde8fa]",
+        )}
+      >
+        <Users size={18} strokeWidth={2.3} aria-hidden />
+        User Led Events
+        {userLedCount > 0 && (
+          <span
+            className={cn(
+              "rounded-full px-2 py-[1px] text-[12px] font-bold",
+              selectedFilter === "userLed" ? "bg-white/20 text-white" : "bg-white text-brand",
+            )}
+          >
+            {userLedCount}
+          </span>
+        )}
+      </motion.button>
+
       <motion.button
         type="button"
         onClick={onPostEvent}
         whileHover={{ y: -1 }}
         whileTap={{ scale: 0.98, y: 0 }}
         transition={{ duration: 0.15, ease: "easeOut" }}
-        className="mt-[21px] flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand text-[16px] font-bold text-white shadow-[0_6px_16px_rgb(23_102_232_/_0.28)] transition-colors duration-150 hover:bg-brand-dark active:bg-brand-press"
+        className="mt-2.5 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand text-[16px] font-bold text-white shadow-[0_6px_16px_rgb(23_102_232_/_0.28)] transition-colors duration-150 hover:bg-brand-dark active:bg-brand-press"
       >
         <Plus size={19} strokeWidth={2.8} aria-hidden />
         Post Event

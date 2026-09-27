@@ -4,7 +4,7 @@ import type { ComponentType } from "react";
 import { ChevronRight, Radio } from "lucide-react";
 
 import { PeopleIcon, PizzaSliceIcon } from "@/components/icons/CategoryIcons";
-import { cn, formatCount } from "@/lib/utils";
+import { cn, formatCount, isEventToday, isMappedCampusEvent } from "@/lib/utils";
 import type { CampusEvent } from "@/types/event";
 
 type IconComponent = ComponentType<{
@@ -37,7 +37,7 @@ export function CampusStats({ events, goingCount, active, onSelect }: CampusStat
   const stats: Stat[] = [
     {
       id: "happening",
-      value: events.length,
+      value: events.filter((event) => isMappedCampusEvent(event) && isEventToday(event)).length,
       label: "happening now",
       icon: Radio,
       iconClass: "text-[#F5453A]",

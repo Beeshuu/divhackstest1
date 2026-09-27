@@ -7,12 +7,14 @@ import {
   Check,
   ChevronRight,
   Clock,
+  ExternalLink,
   Info,
   MapPin,
   Navigation,
   PersonStanding,
   Share2,
   Star,
+  Ban,
   X,
 } from "lucide-react";
 
@@ -36,6 +38,9 @@ interface EventDrawerProps {
   onToggleSaved: () => void;
   onShare: () => void;
   onDirections: () => void;
+  isRejected?: boolean;
+  onReject: () => void;
+  onRestore?: () => void;
 }
 
 /**
@@ -114,6 +119,9 @@ function DrawerCard({
   onToggleSaved,
   onShare,
   onDirections,
+  isRejected,
+  onReject,
+  onRestore,
 }: EventDrawerProps) {
   const palette = MARKER_PALETTE[event.markerColor];
   const goingCount = event.goingCount + (isGoing ? 1 : 0);
@@ -190,6 +198,17 @@ function DrawerCard({
         <p className="mt-[4px] text-[15px] font-bold leading-[1.15] text-ink">
           {event.locationName}
         </p>
+        {event.source === "university-life" && event.sourceUrl && (
+          <a
+            href={event.sourceUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-2 inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand hover:underline"
+          >
+            University Life listing
+            <ExternalLink size={13} strokeWidth={2.3} aria-hidden />
+          </a>
+        )}
 
         <button
           type="button"
@@ -291,6 +310,25 @@ function DrawerCard({
           <Navigation size={17} strokeWidth={2.2} aria-hidden className="fill-brand" />
           Directions
         </motion.button>
+
+        {isRejected ? (
+          <button
+            type="button"
+            onClick={onRestore}
+            className="mt-[9px] flex h-[40px] w-full items-center justify-center text-[14px] font-semibold text-muted transition-colors duration-150 hover:text-ink"
+          >
+            Show on map again
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={onReject}
+            className="mt-[9px] flex h-[40px] w-full items-center justify-center gap-2 text-[14px] font-semibold text-muted transition-colors duration-150 hover:text-coral-text"
+          >
+            <Ban size={15} strokeWidth={2.3} aria-hidden />
+            Reject event
+          </button>
+        )}
 
         <div className="mt-[18px] flex items-start gap-[11px]">
           <CalendarDays

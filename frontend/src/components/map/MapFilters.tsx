@@ -4,7 +4,6 @@ import { useEffect, useRef, useState, type ComponentType } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { CalendarDays, Check, ChevronDown, Grid2x2, MapPin, TrendingUp } from "lucide-react";
 
-import { PizzaSliceIcon } from "@/components/icons/CategoryIcons";
 import { EVENT_CATEGORIES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import type { DateFilter, EventCategory, MapPill } from "@/types/event";
@@ -29,7 +28,6 @@ interface MapFiltersProps {
 const PILLS: Array<{ id: MapPill; label: string; icon: IconComponent }> = [
   { id: "trending", label: "Trending", icon: TrendingUp },
   { id: "nearMe", label: "Near Me", icon: MapPin },
-  { id: "freeFood", label: "Free Food", icon: PizzaSliceIcon },
 ];
 
 const PILL_BASE =

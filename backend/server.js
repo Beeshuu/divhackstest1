@@ -6,6 +6,8 @@ import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { loadUniversityLifeEvents } from './university-life.js';
+
 const root = fileURLToPath(new URL('.', import.meta.url));
 const dataDirectory = join(root, 'data');
 mkdirSync(dataDirectory, { recursive: true });
@@ -334,6 +336,14 @@ function attachGoing(row, userId) {
 function findEvent(id, userId) {
   return attachGoing(db.prepare(`SELECT ${EVENT_FIELDS} FROM events WHERE events.id = ?`).get(id), userId);
 }
+
+app.get('/api/university-life/events', async (_request, response) => {
+  try {
+    response.json(await loadUniversityLifeEvents());
+  } catch (error) {
+    response.status(502).json({ error: 'Could not refresh University Life events.', detail: String(error.message ?? error) });
+  }
+});
 
 app.get('/api/events', (request, response) => {
   const viewer = currentUser(request);

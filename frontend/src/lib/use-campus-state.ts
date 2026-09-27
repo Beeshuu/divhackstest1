@@ -3,8 +3,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { CATEGORY_STYLE } from "./constants";
-import { formatClock, timeStatusFor, todayLabel } from "./utils";
+import {
+  dateLabelFrom,
+  dateTodayAt,
+  formatClock,
+  isEventToday,
+  timeStatusFromDates,
+} from "./utils";
+import { communityEventFromApi } from "./community-events";
 import { FEATURED_EVENT_ID, MOCK_EVENTS } from "@/data/mock-events";
+import { isUserLedEvent, USER_LED_EVENTS } from "@/data/user-led-events";
 import type {
   CampusEvent,
   DateFilter,
@@ -27,8 +35,9 @@ function matchesQuery(event: CampusEvent, query: string): boolean {
   );
 }
 
-/** Built-in events have a route; session-only events deliberately do not. */
+/** Built-in events have a route; live and session-only events use their source URL. */
 export function eventPath(event: CampusEvent): string | null {
+  if (event.sourceUrl) return event.sourceUrl;
   return event.isTemporary ? null : `/events/${event.id}`;
 }
 
@@ -36,8 +45,9 @@ const APP_TITLE = "Campus Connect — Columbia University";
 
 /** Keeps the address bar and tab title in step with the open event. */
 function syncUrl(event: CampusEvent | null) {
-  const path = event ? eventPath(event) ?? "/" : "/";
-  if (window.location.pathname !== path) window.history.replaceState(null, "", path);
+  const path = event ? eventPath(event) : "/";
+  const internal = path && !path.startsWith("http") ? path : "/";
+  if (window.location.pathname !== internal) window.history.replaceState(null, "", internal);
   document.title = event ? `${event.title} at ${event.locationName} — Campus Connect` : APP_TITLE;
 }
 
@@ -45,11 +55,34 @@ function syncUrl(event: CampusEvent | null) {
  * All interactive state for the Phase 2 frontend. Everything lives in React
  * memory: going/saved/created events reset on refresh by design.
  */
-export function useCampusState(initialEventId?: string) {
+function goingKey(userId?: number) {
+  return userId ? `campus-connect-going:${userId}` : "campus-connect-going";
+}
+
+function rejectedKey(userId?: number) {
+  return userId ? `campus-connect-rejected:${userId}` : "campus-connect-rejected";
+}
+
+function readIdSet(key: string): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = window.localStorage.getItem(key);
+    const parsed = raw ? (JSON.parse(raw) as unknown) : [];
+    return new Set(Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === "string") : []);
+  } catch {
+    return new Set();
+  }
+}
+
+export function useCampusState(initialEventId?: string, userId?: number, userName?: string) {
+  const [liveEvents, setLiveEvents] = useState<CampusEvent[]>([]);
+  const [communityEvents, setCommunityEvents] = useState<CampusEvent[]>([]);
+  const [liveStatus, setLiveStatus] = useState<"idle" | "ready" | "error">("idle");
   const [createdEvents, setCreatedEvents] = useState<CampusEvent[]>([]);
   const [selectedId, setSelectedId] = useState(initialEventId ?? FEATURED_EVENT_ID);
   const [drawerOpen, setDrawerOpen] = useState(Boolean(initialEventId));
-  const [going, setGoing] = useState<Set<string>>(() => new Set());
+  const [going, setGoing] = useState<Set<string>>(() => readIdSet(goingKey(userId)));
+  const [rejected, setRejected] = useState<Set<string>>(() => readIdSet(rejectedKey(userId)));
   const [saved, setSaved] = useState<Set<string>>(() => new Set());
   const [query, setQuery] = useState("");
   const [sidebarFilter, setSidebarFilter] = useState<SidebarFilter>("all");
@@ -59,22 +92,84 @@ export function useCampusState(initialEventId?: string) {
   const [toast, setToast] = useState<Toast | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const events = useMemo(() => [...MOCK_EVENTS, ...createdEvents], [createdEvents]);
+  useEffect(() => {
+    setGoing(readIdSet(goingKey(userId)));
+    setRejected(readIdSet(rejectedKey(userId)));
+  }, [userId]);
+
+  useEffect(() => {
+    window.localStorage.setItem(goingKey(userId), JSON.stringify([...going]));
+  }, [userId, going]);
+
+  useEffect(() => {
+    window.localStorage.setItem(rejectedKey(userId), JSON.stringify([...rejected]));
+  }, [userId, rejected]);
+
+  const events = useMemo(
+    () => [...liveEvents, ...USER_LED_EVENTS, ...communityEvents, ...MOCK_EVENTS, ...createdEvents],
+    [liveEvents, communityEvents, createdEvents],
+  );
   const selectedEvent = events.find((e) => e.id === selectedId);
+
+  const refreshLiveEvents = useCallback(async () => {
+    try {
+      const response = await fetch("/api/university-life/events");
+      if (!response.ok) throw new Error("Could not refresh University Life events.");
+      const body = await response.json();
+      setLiveEvents(Array.isArray(body.events) ? body.events : []);
+      setLiveStatus("ready");
+    } catch {
+      setLiveStatus((prev) => (prev === "ready" ? "ready" : "error"));
+    }
+
+    try {
+      const response = await fetch("/api/events");
+      if (!response.ok) return;
+      const body: unknown = await response.json();
+      const rows = Array.isArray(body) ? body : [];
+      setCommunityEvents(
+        rows
+          .map((row) => communityEventFromApi(row as Parameters<typeof communityEventFromApi>[0], userId))
+          .filter((event): event is CampusEvent => Boolean(event)),
+      );
+    } catch {
+      // Seeded student events still fill User Led Events if the API is down.
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    void refreshLiveEvents();
+    const timer = window.setInterval(() => void refreshLiveEvents(), 3 * 60 * 1000);
+    const onFocus = () => void refreshLiveEvents();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [refreshLiveEvents]);
+
+  const searching = query.trim().length > 0;
 
   const visibleEvents = useMemo(
     () =>
       events.filter((event) => {
+        if (rejected.has(event.id)) return searching && matchesQuery(event, query);
         if (!matchesQuery(event, query)) return false;
-        if (sidebarFilter === "saved" && !saved.has(event.id)) return false;
-        if (sidebarFilter !== "all" && sidebarFilter !== "saved" && event.category !== sidebarFilter)
-          return false;
-        if (mapPill === "freeFood" && event.category !== "Free Food") return false;
+        if (sidebarFilter === "saved") return saved.has(event.id);
+        if (sidebarFilter === "tbd") return event.locationKind === "tbd";
+        if (sidebarFilter === "remote") return event.locationKind === "remote";
+        if (sidebarFilter === "userLed") return isUserLedEvent(event, userName);
+        if (event.locationKind === "tbd" || event.locationKind === "remote") return false;
         if (categoryFilter !== "all" && event.category !== categoryFilter) return false;
-        if (dateFilter === "today" && !event.dateLabel.startsWith("Today")) return false;
+        if (dateFilter === "today" && !isEventToday(event)) return false;
         return true;
       }),
-    [events, query, sidebarFilter, saved, mapPill, categoryFilter, dateFilter],
+    [events, query, searching, rejected, sidebarFilter, saved, categoryFilter, dateFilter, userName],
+  );
+
+  const searchResults = useMemo(
+    () => events.filter((event) => matchesQuery(event, query)),
+    [events, query],
   );
 
   const showToast = useCallback((message: string) => {
@@ -114,10 +209,42 @@ export function useCampusState(initialEventId?: string) {
   const toggleGoing = useCallback((id: string) => toggleIn(setGoing, id), []);
   const toggleSaved = useCallback((id: string) => toggleIn(setSaved, id), []);
 
+  const rejectEvent = useCallback((id: string) => {
+    setRejected((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+    setGoing((prev) => {
+      if (!prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+    setSaved((prev) => {
+      if (!prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }, []);
+
+  const restoreEvent = useCallback((id: string) => {
+    setRejected((prev) => {
+      if (!prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }, []);
+
   const createEvent = useCallback(
-    (draft: EventDraft): CampusEvent | null => {
+    (draft: EventDraft, hostName = "You"): CampusEvent | null => {
       if (!draft.point) return null;
       const style = CATEGORY_STYLE[draft.category];
+      const start = dateTodayAt(draft.startTime);
+      const end = dateTodayAt(draft.endTime);
+      if (end <= start) end.setDate(end.getDate() + 1);
       const event: CampusEvent = {
         id: `temp-${Date.now()}`,
         title: draft.title.trim(),
@@ -128,16 +255,21 @@ export function useCampusState(initialEventId?: string) {
         mapX: draft.point.x,
         mapY: draft.point.y,
         distance: "On campus",
-        timeStatus: timeStatusFor(draft.startTime, draft.endTime),
+        timeStatus: timeStatusFromDates(start, end),
         startTime: formatClock(draft.startTime),
         endTime: formatClock(draft.endTime),
-        dateLabel: todayLabel(),
+        dateLabel: dateLabelFrom(start),
+        startsAt: start.toISOString(),
+        endsAt: end.toISOString(),
         goingCount: 0,
         interestedCount: 0,
-        host: "You",
+        host: hostName,
         markerColor: style.markerColor,
         iconType: style.iconType,
         isTemporary: true,
+        locationKind: "mapped",
+        source: "user",
+        hostedByMe: true,
       };
       setCreatedEvents((prev) => [...prev, event]);
       setSelectedId(event.id);
@@ -160,6 +292,7 @@ export function useCampusState(initialEventId?: string) {
     events,
     clearFilters,
     visibleEvents,
+    searchResults,
     selectedEvent,
     drawerOpen,
     selectEvent,
@@ -168,6 +301,9 @@ export function useCampusState(initialEventId?: string) {
     toggleGoing,
     saved,
     toggleSaved,
+    rejected,
+    rejectEvent,
+    restoreEvent,
     query,
     setQuery,
     sidebarFilter,
@@ -182,6 +318,11 @@ export function useCampusState(initialEventId?: string) {
     toast,
     showToast,
     dismissToast: () => setToast(null),
+    liveStatus,
+    tbdCount: events.filter((event) => event.locationKind === "tbd" && !rejected.has(event.id)).length,
+    remoteCount: events.filter((event) => event.locationKind === "remote" && !rejected.has(event.id)).length,
+    userLedCount: events.filter((event) => isUserLedEvent(event, userName) && !rejected.has(event.id)).length,
+    refreshLiveEvents,
   };
 }
 

@@ -9,6 +9,7 @@ import { GeminiSparkle } from "@/components/gemini/GeminiSparkle";
 import { CategoryGlyph } from "@/components/icons/CategoryIcons";
 import { NotificationMenu, type NotificationAction } from "@/components/layout/NotificationMenu";
 import { useAuth } from "@/lib/auth";
+import type { CampusNotice } from "@/lib/use-campus-notices";
 import { initialsOf } from "@/lib/utils";
 import type { CampusEvent } from "@/types/event";
 import type { AccountView } from "@/components/account/AccountPanel";
@@ -25,6 +26,9 @@ interface TopNavbarProps extends SearchProps {
   onOpenSidebar: () => void;
   onAskGemini: () => void;
   events: CampusEvent[];
+  notices: CampusNotice[];
+  unreadNotices: number;
+  onNoticesSeen: () => void;
   onNotificationAction: (action: NotificationAction) => void;
   onOpenAccount: (view: AccountView) => void;
 }
@@ -37,6 +41,9 @@ export function TopNavbar({
   onOpenSidebar,
   onAskGemini,
   events,
+  notices,
+  unreadNotices,
+  onNoticesSeen,
   onNotificationAction,
   onOpenAccount,
   ...search
@@ -77,6 +84,9 @@ export function TopNavbar({
       <AccountCluster
         onAskGemini={onAskGemini}
         events={events}
+        notices={notices}
+        unreadNotices={unreadNotices}
+        onNoticesSeen={onNoticesSeen}
         onSelectEvent={search.onSelectResult}
         onNotificationAction={onNotificationAction}
         onOpenAccount={onOpenAccount}
@@ -203,12 +213,18 @@ function SearchField({ query, onQueryChange, results, onSelectResult }: SearchPr
 function AccountCluster({
   onAskGemini,
   events,
+  notices,
+  unreadNotices,
+  onNoticesSeen,
   onSelectEvent,
   onNotificationAction,
   onOpenAccount,
 }: {
   onAskGemini: () => void;
   events: CampusEvent[];
+  notices: CampusNotice[];
+  unreadNotices: number;
+  onNoticesSeen: () => void;
   onSelectEvent: (event: CampusEvent) => void;
   onNotificationAction: (action: NotificationAction) => void;
   onOpenAccount: (view: AccountView) => void;
@@ -228,7 +244,14 @@ function AccountCluster({
         <span className="text-[14px] font-bold">Ask Gemini</span>
       </motion.button>
 
-      <NotificationMenu events={events} onSelectEvent={onSelectEvent} onAction={onNotificationAction} />
+      <NotificationMenu
+        notices={notices}
+        unread={unreadNotices}
+        onSeen={onNoticesSeen}
+        events={events}
+        onSelectEvent={onSelectEvent}
+        onAction={onNotificationAction}
+      />
 
       <span aria-hidden className="hidden h-[26px] w-px bg-line-strong tablet:block" />
 
