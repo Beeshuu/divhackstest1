@@ -151,14 +151,14 @@ export function answerCampusQuestion(
 
   if (includesAny(query, ["forgot password", "reset password", "reset my password", "two-step", "2fa", "verification", "imessage", "photon"])) {
     return {
-      text: "Campus Connect uses Photon Spectrum for codes. Forgot password? and every sign-in send a 6-digit code over iMessage. Enter it in the app, or reply to the iMessage.",
+      text: "Campus Connect uses Photon Spectrum for codes. Forgot password? always iMessages a reset code. Two-step sign-in is optional — turn it on or off in Settings. Enter the code in the app, or reply to the iMessage.",
       matches: [],
     };
   }
 
   if (includesAny(query, ["profile", "password", "privacy", "settings", "hosted", "attended", "account"])) {
     return {
-      text: "Tap your avatar for Profile (Going, Hosted, Attended) and Settings (account info, change password, profile privacy). On Sign In, Forgot password? resets with a code to your phone.",
+      text: "Tap your avatar for Profile (Going, Hosted, Attended) and Settings (account info, change password, two-step verification, profile privacy). On Sign In, Forgot password? resets with a Photon code.",
       matches: [],
     };
   }

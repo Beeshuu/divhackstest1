@@ -19,6 +19,7 @@ export interface AuthUser {
   phone: string;
   college: string;
   profilePrivate: boolean;
+  twoFactorEnabled: boolean;
 }
 
 export interface ProfileUpdate {
@@ -27,6 +28,7 @@ export interface ProfileUpdate {
   phone?: string;
   college?: string;
   profilePrivate?: boolean;
+  twoFactorEnabled?: boolean;
 }
 
 export interface SignUpInput {
@@ -94,6 +96,10 @@ function asUser(value: unknown): AuthUser {
     phone: String(row.phone ?? ""),
     college: String(row.college ?? ""),
     profilePrivate: Boolean(row.profilePrivate ?? row.profile_private),
+    twoFactorEnabled:
+      typeof row.twoFactorEnabled === "boolean"
+        ? row.twoFactorEnabled
+        : row.two_factor_enabled !== 0,
   };
 }
 

@@ -78,6 +78,9 @@ const existingUserColumns = new Set(db.prepare('PRAGMA table_info(users)').all()
 if (!existingUserColumns.has('profile_private')) {
   db.exec('ALTER TABLE users ADD COLUMN profile_private INTEGER NOT NULL DEFAULT 0');
 }
+if (!existingUserColumns.has('two_factor_enabled')) {
+  db.exec('ALTER TABLE users ADD COLUMN two_factor_enabled INTEGER NOT NULL DEFAULT 1');
+}
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS password_resets (
@@ -181,7 +184,7 @@ app.post('/api/spectrum/webhook', express.raw({ type: '*/*' }), async (request, 
 app.use(express.json());
 app.use(express.static(join(root, 'dist')));
 
-const USER_COLUMNS = 'id, name, email, phone, college, profile_private';
+const USER_COLUMNS = 'id, name, email, phone, college, profile_private, two_factor_enabled';
 
 function publicUser(row) {
   if (!row) return null;
@@ -192,6 +195,7 @@ function publicUser(row) {
     phone: row.phone,
     college: row.college,
     profilePrivate: Boolean(row.profile_private),
+    twoFactorEnabled: row.two_factor_enabled !== 0,
   };
 }
 
@@ -375,7 +379,7 @@ function currentUser(request) {
   if (!token) return null;
   const row = db
     .prepare(
-      `SELECT users.id, users.name, users.email, users.phone, users.college, users.profile_private
+      `SELECT users.id, users.name, users.email, users.phone, users.college, users.profile_private, users.two_factor_enabled
        FROM sessions JOIN users ON users.id = sessions.user_id WHERE sessions.token = ?`,
     )
     .get(token);
@@ -435,6 +439,9 @@ app.post('/api/auth/login', async (request, response) => {
   if (!account || !passwordMatches(password, account.password_salt, account.password_hash)) {
     return response.status(401).json({ error: 'Those credentials do not match an account.' });
   }
+  if (!account.two_factor_enabled) {
+    return response.json(finishLogin(account));
+  }
   try {
     const challenge = await issueChallenge(account, 'login_2fa');
     response.json({
@@ -479,7 +486,7 @@ app.get('/api/auth/me', requireUser, (request, response) => {
 });
 
 app.patch('/api/auth/me', requireUser, (request, response) => {
-  const { name, email, phone, college, profilePrivate } = request.body ?? {};
+  const { name, email, phone, college, profilePrivate, twoFactorEnabled } = request.body ?? {};
   const current = db.prepare(`SELECT ${USER_COLUMNS} FROM users WHERE id = ?`).get(request.user.id);
   if (!current) return response.status(404).json({ error: 'That account no longer exists.' });
 
@@ -494,6 +501,8 @@ app.patch('/api/auth/me', requireUser, (request, response) => {
         : null;
   const nextPrivate =
     typeof profilePrivate === 'boolean' ? (profilePrivate ? 1 : 0) : current.profile_private;
+  const nextTwoFactor =
+    typeof twoFactorEnabled === 'boolean' ? (twoFactorEnabled ? 1 : 0) : current.two_factor_enabled;
 
   if (!nextName) return response.status(400).json({ error: 'Enter your full name.' });
   if (!nextPhone) return response.status(400).json({ error: 'Enter your phone number.' });
@@ -509,8 +518,8 @@ app.patch('/api/auth/me', requireUser, (request, response) => {
   }
 
   db.prepare(
-    'UPDATE users SET name = ?, email = ?, phone = ?, college = ?, profile_private = ? WHERE id = ?',
-  ).run(nextName, nextEmail, nextPhone, nextCollege, nextPrivate, current.id);
+    'UPDATE users SET name = ?, email = ?, phone = ?, college = ?, profile_private = ?, two_factor_enabled = ? WHERE id = ?',
+  ).run(nextName, nextEmail, nextPhone, nextCollege, nextPrivate, nextTwoFactor, current.id);
 
   response.json({ user: publicUser(db.prepare(`SELECT ${USER_COLUMNS} FROM users WHERE id = ?`).get(current.id)) });
 });
