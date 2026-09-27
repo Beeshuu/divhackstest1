@@ -95,7 +95,11 @@ async function errorFrom(response: Response, fallback: string): Promise<Error> {
 }
 
 function asUser(value: unknown): AuthUser {
-  const row = value as Partial<AuthUser> & { profile_private?: unknown };
+  const row = value as Partial<AuthUser> & {
+    profile_private?: unknown;
+    two_factor_enabled?: unknown;
+    photon_notifications_enabled?: unknown;
+  };
   return {
     id: Number(row.id),
     name: String(row.name ?? ""),
