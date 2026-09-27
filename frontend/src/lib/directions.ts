@@ -1,9 +1,14 @@
-import { mapToGeo, type LatLng } from "./geo";
+import { campusMapToGeo, type CampusId } from "./campuses";
+import { type LatLng } from "./geo";
 import type { CampusEvent } from "@/types/event";
 
 function destinationFor(event: CampusEvent): string {
+  if (event.latitude != null && event.longitude != null) {
+    return `${event.latitude.toFixed(6)},${event.longitude.toFixed(6)}`;
+  }
   if (event.isTemporary) {
-    const { lat, lng } = mapToGeo({ x: event.mapX, y: event.mapY });
+    const campusId = (event.campusId as CampusId | undefined) ?? "columbia";
+    const { lat, lng } = campusMapToGeo({ x: event.mapX, y: event.mapY }, campusId);
     return `${lat.toFixed(6)},${lng.toFixed(6)}`;
   }
   return `${event.address}, New York, NY`;

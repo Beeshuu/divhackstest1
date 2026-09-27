@@ -1,5 +1,5 @@
+import { campusIdFromLatLng, geoToCampusMap } from "@/lib/campuses";
 import { CATEGORY_STYLE, EVENT_CATEGORIES } from "@/lib/constants";
-import { geoToMap } from "@/lib/geo";
 import { clockLabel, dateLabelFrom, timeStatusFromDates } from "@/lib/utils";
 import type { CampusEvent, EventCategory } from "@/types/event";
 
@@ -24,7 +24,9 @@ export function communityEventFromApi(row: ApiEventRow, myUserId?: number): Camp
   const start = new Date(row.starts_at);
   const end = new Date(row.closes_at);
   if (Number.isNaN(start.valueOf()) || Number.isNaN(end.valueOf()) || end <= new Date()) return null;
-  const point = geoToMap({ lat: row.latitude, lng: row.longitude });
+  const latlng = { lat: row.latitude, lng: row.longitude };
+  const campusId = campusIdFromLatLng(latlng) ?? "columbia";
+  const point = geoToCampusMap(latlng, campusId);
   const category = row.category as EventCategory;
   const style = CATEGORY_STYLE[category];
   return {
@@ -36,6 +38,9 @@ export function communityEventFromApi(row: ApiEventRow, myUserId?: number): Camp
     description: row.description || "Posted by a student on Campus Connect.",
     mapX: point.x,
     mapY: point.y,
+    campusId,
+    latitude: row.latitude,
+    longitude: row.longitude,
     distance: "On campus",
     timeStatus: timeStatusFromDates(start, end),
     startTime: clockLabel(start),

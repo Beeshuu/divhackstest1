@@ -15,8 +15,8 @@ const MIN_SCALE = 1;
 const MAX_SCALE = 4;
 /** How far past the drawn edge the map may be dragged, in screen px. */
 const PAN_SLACK = 80;
-/** College Walk / Low Library — the default camera target. */
-const HOME = { x: 52, y: 49 };
+/** College Walk / Low Library — the default camera target on the Columbia plan. */
+const DEFAULT_HOME = { x: 52, y: 49 };
 const TAP_TOLERANCE = 5;
 const EASE = [0.32, 0.72, 0, 1] as const;
 
@@ -75,7 +75,7 @@ function framePoint(vw: number, vh: number, layer: MapLayerSize, point: MapPoint
  * `translate(x, y) scale(s)` from its top-left corner, so a map-local point `m`
  * lands on screen at `x + s * m`.
  */
-export function useMapView(onTap?: (point: MapPoint) => void): MapView {
+export function useMapView(onTap?: (point: MapPoint) => void, homePoint: MapPoint = DEFAULT_HOME): MapView {
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const paneRef = useRef<HTMLDivElement | null>(null);
   const x = useMotionValue(0);
@@ -142,7 +142,7 @@ export function useMapView(onTap?: (point: MapPoint) => void): MapView {
       setHomeScale(home);
       const atHome = Math.abs(scale.get() - fillScale(vw, vh, previous)) < 0.04 || scale.get() <= 1.01;
       if (atHome) {
-        const frame = framePoint(vw, vh, next, HOME, home);
+        const frame = framePoint(vw, vh, next, homePoint, home);
         const held = clampTranslate(frame.x, frame.y, home);
         scale.set(home);
         x.set(held.x);
@@ -157,7 +157,7 @@ export function useMapView(onTap?: (point: MapPoint) => void): MapView {
     ro.observe(el);
     apply();
     return () => ro.disconnect();
-  }, [clampTranslate, scale, x, y]);
+  }, [clampTranslate, homePoint, scale, x, y]);
 
   /** Zooms keeping the screen point (px, py) — relative to the viewport — fixed. */
   const zoomAround = useCallback(
@@ -202,9 +202,9 @@ export function useMapView(onTap?: (point: MapPoint) => void): MapView {
     const { w: vw, h: vh } = size();
     const layer = layerRef.current;
     const s = fillScale(vw, vh, layer);
-    const frame = framePoint(vw, vh, layer, HOME, s);
+    const frame = framePoint(vw, vh, layer, homePoint, s);
     animateTo(frame.x, frame.y, s);
-  }, [animateTo]);
+  }, [animateTo, homePoint]);
 
   // Wheel / trackpad zoom needs a non-passive listener to stop page zoom.
   useEffect(() => {

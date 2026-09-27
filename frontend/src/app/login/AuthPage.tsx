@@ -17,27 +17,9 @@ import {
 } from "lucide-react";
 
 import { useAuth, type AuthChallenge } from "@/lib/auth";
+import { COLLEGES, OTHER_OPTION } from "@/lib/colleges";
 import { ResetPasswordForm } from "./ResetPasswordForm";
 import { TwoFactorForm } from "./TwoFactorForm";
-
-const OTHER_OPTION = "Other";
-
-const COLLEGES = [
-  "Columbia University",
-  "Barnard College",
-  "New York University",
-  "The New School",
-  "Fordham University",
-  "Pace University",
-  "Cooper Union",
-  "CUNY — Baruch College",
-  "CUNY — City College of New York",
-  "CUNY — Hunter College",
-  "CUNY — Brooklyn College",
-  "CUNY — Queens College",
-  "St. John's University",
-  "Stevens Institute of Technology",
-];
 
 export default function AuthPage() {
   const router = useRouter();

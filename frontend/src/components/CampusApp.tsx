@@ -22,8 +22,8 @@ import { MapFilters } from "@/components/map/MapFilters";
 import { MapToast } from "@/components/map/MapToast";
 import { OutOfReachBanner } from "@/components/map/OutOfReachBanner";
 import { PickLocationBanner } from "@/components/map/PickLocationBanner";
+import { campusFromCollege, campusMapKey, campusMapToGeo, geoToCampusMap, isOnCampusPlan } from "@/lib/campuses";
 import { CATEGORY_STYLE } from "@/lib/constants";
-import { geoToMap, isOnMap, mapToGeo } from "@/lib/geo";
 import { useAuth } from "@/lib/auth";
 import { useCampusNotices } from "@/lib/use-campus-notices";
 import { eventPath, useCampusState } from "@/lib/use-campus-state";
@@ -94,7 +94,8 @@ interface CampusAppProps {
 /** The full-screen Campus Connect shell, shared by `/` and `/events/[id]`. */
 export function CampusApp({ initialEventId }: CampusAppProps) {
   const { user, authFetch } = useAuth();
-  const state = useCampusState(initialEventId, user?.id, user?.name);
+  const campus = campusFromCollege(user?.college);
+  const state = useCampusState(initialEventId, user?.id, user?.name, campus.spec.id);
   const deliverPhoton = useCallback(
     (title: string, body: string) => {
       if (!user?.photonNotificationsEnabled) return;
@@ -135,7 +136,7 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
   };
 
   const submitDraft = () => {
-    const created = state.createEvent(draft, user?.name ?? "You");
+    const created = state.createEvent(draft, user?.name ?? "You", campus.spec.id);
     if (!created) return;
     setComposer("closed");
     setDraft(emptyDraft());
@@ -146,7 +147,7 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
     const start = dateTodayAt(draft.startTime);
     const end = dateTodayAt(draft.endTime);
     if (end <= start) end.setDate(end.getDate() + 1);
-    const geo = mapToGeo(draft.point);
+    const geo = campusMapToGeo(draft.point, campus.spec.id);
     void authFetch("/api/events", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -174,15 +175,15 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
   }, [composer]);
 
   // Projected every render so the live pin follows watchPosition updates.
-  const userPoint = geo.position ? geoToMap(geo.position) : null;
-  const userOnMap = userPoint && isOnMap(userPoint) ? userPoint : null;
+  const userPoint = geo.position ? geoToCampusMap(geo.position, campus.spec.id) : null;
+  const userOnMap = userPoint && isOnCampusPlan(userPoint) ? userPoint : null;
 
   useEffect(() => {
     if (!geo.position) return;
-    const onCampus = isOnMap(geoToMap(geo.position));
+    const onCampus = isOnCampusPlan(geoToCampusMap(geo.position, campus.spec.id));
     setOutOfReach(!onCampus);
     if (onCampus) setHideOutOfReach(false);
-  }, [geo.position]);
+  }, [campus.spec.id, geo.position]);
 
   /** Asks for location, then shows the pin only while the user is on campus. */
   const locateUser = async (options?: { quiet?: boolean }): Promise<boolean> => {
@@ -193,8 +194,8 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
       if (message && !options?.quiet) state.showToast(message);
       return false;
     }
-    const point = geoToMap(result.position);
-    if (!isOnMap(point)) {
+    const point = geoToCampusMap(result.position, campus.spec.id);
+    if (!isOnCampusPlan(point)) {
       setOutOfReach(true);
       setHideOutOfReach(false);
       if (!options?.quiet) state.showToast(OUT_OF_REACH);
@@ -303,6 +304,8 @@ export function CampusApp({ initialEventId }: CampusAppProps) {
 
         <main className="relative min-w-0 flex-1" aria-label="Campus map">
           <CampusMapPlaceholder
+            key={campusMapKey(campus.spec.id)}
+            campus={campus}
             viewRef={mapRef}
             events={
               state.sidebarFilter === "tbd" || state.sidebarFilter === "remote"
