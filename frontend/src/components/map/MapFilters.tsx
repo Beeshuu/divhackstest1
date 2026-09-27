@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ComponentType } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { CalendarDays, Check, ChevronDown, Grid2x2, MapPin, TrendingUp } from "lucide-react";
+import { CalendarDays, Check, ChevronDown, Grid2x2, TrendingUp } from "lucide-react";
 
 import { EVENT_CATEGORIES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -17,8 +17,6 @@ type IconComponent = ComponentType<{
 interface MapFiltersProps {
   activePill: MapPill;
   onPillClick: (pill: MapPill) => void;
-  /** True while Near Me is waiting on the browser location prompt. */
-  locating?: boolean;
   dateFilter: DateFilter;
   onDateChange: (value: DateFilter) => void;
   categoryFilter: EventCategory | "all";
@@ -27,7 +25,6 @@ interface MapFiltersProps {
 
 const PILLS: Array<{ id: MapPill; label: string; icon: IconComponent }> = [
   { id: "trending", label: "Trending", icon: TrendingUp },
-  { id: "nearMe", label: "Near Me", icon: MapPin },
 ];
 
 const PILL_BASE =
@@ -40,7 +37,6 @@ const PILL_IDLE = "border border-line bg-panel text-ink-soft shadow-pill hover:s
 export function MapFilters({
   activePill,
   onPillClick,
-  locating,
   dateFilter,
   onDateChange,
   categoryFilter,
@@ -61,7 +57,6 @@ export function MapFilters({
               key={pill.id}
               type="button"
               aria-pressed={active}
-              aria-busy={(pill.id === "nearMe" && locating) || undefined}
               onClick={() => onPillClick(pill.id)}
               whileHover={{ y: -1 }}
               whileTap={{ scale: 0.97, y: 0 }}
@@ -71,10 +66,7 @@ export function MapFilters({
               <Icon
                 size={16}
                 strokeWidth={2.3}
-                className={cn(
-                  active ? "text-white" : "text-brand",
-                  pill.id === "nearMe" && locating && "animate-pulse",
-                )}
+                className={active ? "text-white" : "text-brand"}
               />
               {pill.label}
             </motion.button>
