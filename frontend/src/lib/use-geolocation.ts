@@ -48,7 +48,6 @@ export function useGeolocation(): GeolocationState {
   const request = useCallback((): Promise<GeoResult> => {
     const settled = (next: GeoStatus) => Promise.resolve({ status: next, position: positionRef.current });
     if (inflight.current) return inflight.current;
-    if (statusRef.current === "granted" && positionRef.current) return settled("granted");
 
     if (typeof navigator === "undefined" || !("geolocation" in navigator)) {
       update("unavailable");
@@ -78,6 +77,11 @@ export function useGeolocation(): GeolocationState {
           }
         },
         (error) => {
+          if (positionRef.current) {
+            update("granted");
+            resolve({ status: "granted", position: positionRef.current });
+            return;
+          }
           const next = error.code === error.PERMISSION_DENIED ? "denied" : "unavailable";
           update(next);
           resolve({ status: next, position: null });
